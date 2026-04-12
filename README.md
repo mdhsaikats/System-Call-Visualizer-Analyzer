@@ -10,6 +10,26 @@ A powerful tool for visualizing and analyzing system calls made by processes on 
 - **Exportable logs** for further analysis
 - **Configurable monitoring** for specific processes or system-wide
 
+## Data Flow Overview
+
+The following diagram illustrates the main data flow and processing pipeline in the application:
+
+```
+UI (Fyne)
+   ↓
+Process Selection
+   ↓
+strace Runner (exec command)
+   ↓
+Parser (convert raw output → structured data)
+   ↓
+Analyzer (frequency + anomaly detection)
+   ↓
+UI updates (tables + charts)
+   ↓
+Logger (save/export)
+```
+
 ## Project Structure
 
 ```
