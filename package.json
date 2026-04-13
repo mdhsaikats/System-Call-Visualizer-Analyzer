@@ -1,0 +1,27 @@
+{
+  "name": "system-call-visualizer-analyzer",
+  "version": "1.0.0",
+  "description": "This is a system call visualizer analyzer",
+  "keywords": [
+    "scva"
+  ],
+  "homepage": "https://github.com/mdhsaikats/System-Call-Visualizer-Analyzer#readme",
+  "bugs": {
+    "url": "https://github.com/mdhsaikats/System-Call-Visualizer-Analyzer/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mdhsaikats/System-Call-Visualizer-Analyzer.git"
+  },
+  "license": "ISC",
+  "author": "saikat",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "hello world"
+  },
+  "devDependencies": {
+    "electron": "^41.2.0"
+  }
+}
