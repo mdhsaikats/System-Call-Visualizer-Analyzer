@@ -53,3 +53,17 @@ ISC
 ## Author
 
 saikat
+
+## Work Distribution
+
+The following is the suggested work distribution for a 5-person team:
+
+| Member | Responsibility                                                        |
+| ------ | --------------------------------------------------------------------- |
+| 1      | Electron main process setup, app initialization, and IPC integration  |
+| 2      | UI/UX design and implementation (HTML/CSS/JS in renderer)             |
+| 3      | System call trace parsing and analysis logic                          |
+| 4      | Visualization components (charts, graphs, interactive elements)       |
+| 5      | Testing, documentation, and packaging for cross-platform distribution |
+
+> Team members should collaborate on integration and code review.
