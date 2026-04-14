@@ -217,29 +217,13 @@
 
       <!-- System Status Mini -->
       <div class="p-4 border-t border-white/[0.04]">
-        <div class="glass-card rounded-xl p-4 flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-zinc-400">Agent Status</span>
-            <div class="flex items-center gap-1.5">
-              <span class="relative flex h-2 w-2">
-                <span
-                  class="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-300 opacity-75"
-                ></span>
-                <span
-                  class="relative inline-flex rounded-full h-2 w-2 bg-zinc-100"
-                ></span>
-              </span>
-              <span
-                class="text-[10px] font-medium text-zinc-300 uppercase tracking-wider"
-                >Active</span
-              >
-            </div>
-          </div>
-          <div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-            <div class="h-full bg-zinc-400 w-[85%] rounded-full"></div>
-          </div>
-          <span class="text-[10px] text-zinc-500">Memory: 85% utilization</span>
-        </div>
+        <button
+          class="glass-card rounded-xl p-4 w-full flex justify-center items-center cursor-pointer"
+          id="logoutBtn"
+          type="button"
+        >
+          Log Out
+        </button>
       </div>
     </aside>
 
@@ -974,9 +958,21 @@
       </div>
     </main>
 
-    <script>
-      // Initialize Lucide Icons
-      lucide.createIcons();
-    </script>
+    <!-- Loading Overlay -->
+    <div
+      id="loadingOverlay"
+      style="display: none"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+    >
+      <div
+        class="bg-zinc-900/80 px-8 py-6 rounded-xl shadow-lg flex flex-col items-center"
+      >
+        <span class="text-lg font-semibold text-white mb-2"
+          >Illegal Authentication</span
+        >
+        <span class="text-zinc-400 text-sm">Redirecting to login...</span>
+      </div>
+    </div>
+    <script src="js/dashboard.js" type="module"></script>
   </body>
 </html>

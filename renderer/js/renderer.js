@@ -1,5 +1,5 @@
 lucide.createIcons();
-import { login } from "./auth.js";
+import { auth, login } from "./auth.js";
 
 document.getElementById("loginBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value;
