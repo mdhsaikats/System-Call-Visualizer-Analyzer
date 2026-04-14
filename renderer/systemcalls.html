@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>System Calls - SysTrace OS</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: [
+                "ui-monospace",
+                "SFMono-Regular",
+                "Menlo",
+                "Monaco",
+                "Consolas",
+                "Liberation Mono",
+                "Courier New",
+                "monospace",
+              ],
+            },
+            colors: {
+              zinc: {
+                850: "#202024",
+                950: "#09090b",
+              },
+            },
+            boxShadow: {
+              glass: "0 4px 30px rgba(0, 0, 0, 0.5)",
+              "inner-light": "inset 0 1px 0 0 rgba(255, 255, 255, 0.05)",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Custom Scrollbar for premium feel */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #52525b;
+      }
+
+      /* Subtle Grid Pattern Background */
+      .bg-grid {
+        background-size: 40px 40px;
+        background-image:
+          linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          );
+      }
+
+      /* Glassmorphism Utilities */
+      .glass-panel {
+        background: rgba(24, 24, 27, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow:
+          inset 0 1px 0 0 rgba(255, 255, 255, 0.02),
+          0 4px 20px -2px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Resizer handle visual */
+      .resizer {
+        cursor: row-resize;
+        position: relative;
+      }
+      .resizer::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 32px;
+        height: 4px;
+        border-radius: 2px;
+        background-color: rgba(255, 255, 255, 0.1);
+        transition: background-color 0.2s;
+      }
+      .resizer:hover::after {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-[#050505] text-zinc-300 font-sans antialiased h-screen w-screen overflow-hidden flex selection:bg-zinc-700 selection:text-white bg-grid"
+  >
+    <!-- Sidebar -->
+    <aside
+      class="w-64 h-full glass-panel flex flex-col justify-between border-r border-white/[0.04] z-20 shrink-0"
+    >
+      <div>
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-white/[0.04]">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-7 h-7 rounded-lg bg-gradient-to-br from-zinc-200 to-zinc-500 flex items-center justify-center shadow-lg"
+            >
+              <i data-lucide="cpu" class="w-4 h-4 text-black"></i>
+            </div>
+            <span class="text-white font-semibold tracking-tight text-sm"
+              >SysTrace OS</span
+            >
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="p-4 space-y-1.5 mt-2">
+          <p
+            class="px-3 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase mb-3 mt-4"
+          >
+            Observability
+          </p>
+
+          <a
+            href="dashboard.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-zinc-800/80 text-zinc-100 shadow-inner-light ring-1 ring-white/10 transition-all duration-200 group"
+          >
+            <i data-lucide="activity" class="w-4 h-4 text-zinc-300"></i>
+            <span class="text-sm font-medium">Dashboard</span>
+          </a>
+          <a
+            href="systemcalls.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="terminal-square"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">System Calls</span>
+          </a>
+          <a
+            href="processtree.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="network"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Process Tree</span>
+          </a>
+          <a
+            href="performance.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="bar-chart-2"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Performance</span>
+          </a>
+
+          <p
+            class="px-3 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase mb-3 mt-8"
+          >
+            Configuration
+          </p>
+
+          <a
+            href="rules.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="filter"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Rules & Filters</span>
+          </a>
+          <a
+            href="setting.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="settings"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Settings</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="p-4 border-t border-white/[0.04]">
+        <div
+          class="bg-zinc-900/50 border border-white/5 rounded-xl p-4 flex flex-col gap-3"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-zinc-400">Buffer Usage</span>
+          </div>
+          <div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+            <div class="h-full bg-zinc-400 w-[42%] rounded-full"></div>
+          </div>
+          <div class="flex justify-between text-[10px] font-mono text-zinc-500">
+            <span>4.2 MB</span>
+            <span>10.0 MB</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative z-10">
+      <!-- Topbar -->
+      <header
+        class="h-16 glass-panel border-b border-white/[0.04] flex items-center justify-between px-6 shrink-0"
+      >
+        <div class="flex items-center gap-4">
+          <h1 class="text-lg font-semibold text-white tracking-tight">
+            Trace Inspector
+          </h1>
+          <div class="h-4 w-px bg-white/10"></div>
+
+          <!-- Action Controls -->
+          <div class="flex items-center gap-2">
+            <button
+              class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white text-black text-xs font-semibold hover:bg-zinc-200 transition-colors shadow-sm"
+            >
+              <i data-lucide="pause" class="w-3.5 h-3.5 fill-current"></i> Pause
+              Trace
+            </button>
+            <button
+              class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-900 text-zinc-300 border border-white/10 text-xs font-medium hover:bg-zinc-800 transition-colors"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear
+            </button>
+            <button
+              class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-900 text-zinc-300 border border-white/10 text-xs font-medium hover:bg-zinc-800 transition-colors"
+            >
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Export .pcap
+            </button>
+          </div>
+        </div>
+
+        <!-- Global Search & Profile -->
+        <div class="flex items-center gap-5">
+          <div class="relative group">
+            <i
+              data-lucide="search"
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-zinc-300 transition-colors"
+            ></i>
+            <input
+              type="text"
+              placeholder="Filter current view..."
+              class="bg-zinc-900/50 border border-white/5 rounded-md pl-9 pr-4 py-1.5 text-xs text-zinc-200 w-64 focus:outline-none focus:ring-1 focus:ring-white/20 focus:bg-zinc-800/80 transition-all duration-250 placeholder:text-zinc-600"
+            />
+          </div>
+
+          <button
+            class="w-8 h-8 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center hover:opacity-80 transition-opacity"
+          >
+            <i data-lucide="user" class="w-4 h-4 text-zinc-400"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Filter Toolbar -->
+      <div
+        class="h-12 border-b border-white/[0.04] bg-zinc-900/40 backdrop-blur-md flex items-center px-6 gap-4 shrink-0"
+      >
+        <span
+          class="text-xs font-semibold text-zinc-500 uppercase tracking-wider"
+          >Filters:</span
+        >
+
+        <!-- Filter Pills -->
+        <div class="flex items-center gap-2">
+          <div
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-800 border border-white/10 text-xs text-zinc-300 font-mono cursor-pointer hover:bg-zinc-700 transition-colors"
+          >
+            <span class="text-zinc-500">pid:</span> 3401, 892
+            <i
+              data-lucide="x"
+              class="w-3 h-3 ml-1 text-zinc-500 hover:text-white"
+            ></i>
+          </div>
+          <div
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-800 border border-white/10 text-xs text-zinc-300 font-mono cursor-pointer hover:bg-zinc-700 transition-colors"
+          >
+            <span class="text-zinc-500">type:</span> I/O
+            <i
+              data-lucide="x"
+              class="w-3 h-3 ml-1 text-zinc-500 hover:text-white"
+            ></i>
+          </div>
+          <div
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded border border-dashed border-white/20 text-xs text-zinc-500 hover:text-zinc-300 hover:border-white/40 cursor-pointer transition-colors"
+          >
+            <i data-lucide="plus" class="w-3 h-3"></i> Add Filter
+          </div>
+        </div>
+      </div>
+
+      <!-- Split Layout Container -->
+      <div class="flex-1 flex flex-col min-h-0">
+        <!-- Top Pane: Data Table -->
+        <div class="flex-1 overflow-auto bg-zinc-950/30">
+          <table class="w-full text-left border-collapse whitespace-nowrap">
+            <thead
+              class="sticky top-0 z-10 bg-zinc-900 border-b border-white/[0.08] shadow-sm"
+            >
+              <tr>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold w-32"
+                >
+                  Timestamp
+                </th>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold w-24"
+                >
+                  CPU
+                </th>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold w-32"
+                >
+                  Process (PID)
+                </th>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold w-40"
+                >
+                  Syscall
+                </th>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold"
+                >
+                  Arguments
+                </th>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold w-24 text-right"
+                >
+                  Return
+                </th>
+                <th
+                  class="px-4 py-2.5 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold w-24 text-right"
+                >
+                  Latency
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/[0.02] text-[11px] font-mono">
+              <!-- Normal Row -->
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.045012</td>
+                <td class="px-4 py-2">02</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >3401</span
+                  >
+                  <span class="text-zinc-300">nginx</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">epoll_wait</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (10, [{events=EPOLLIN, data={u32=3301}}], 512, 1000)
+                </td>
+                <td class="px-4 py-2 text-right text-zinc-300">1</td>
+                <td class="px-4 py-2 text-right">0.012 ms</td>
+              </tr>
+
+              <!-- Error Row -->
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400 bg-white/[0.01]"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.045105</td>
+                <td class="px-4 py-2">04</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >3401</span
+                  >
+                  <span class="text-zinc-300">nginx</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">openat</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (AT_FDCWD, "/etc/nginx/conf.d/missing.conf", O_RDONLY)
+                </td>
+                <td class="px-4 py-2 text-right">
+                  <span
+                    class="text-white bg-white/10 px-1.5 py-0.5 rounded border border-white/10"
+                    >-2 (ENOENT)</span
+                  >
+                </td>
+                <td class="px-4 py-2 text-right">0.045 ms</td>
+              </tr>
+
+              <!-- Normal Row -->
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.045230</td>
+                <td class="px-4 py-2">01</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >1104</span
+                  >
+                  <span class="text-zinc-300">postgres</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">pwrite64</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (23, "BEGIN\0\0\0...", 8192, 10485760)
+                </td>
+                <td class="px-4 py-2 text-right text-zinc-300">8192</td>
+                <td class="px-4 py-2 text-right">0.850 ms</td>
+              </tr>
+
+              <!-- Active/Selected Row -->
+              <tr
+                class="bg-zinc-800/80 border-l-2 border-l-zinc-300 text-zinc-200 cursor-pointer"
+              >
+                <td class="px-4 py-2 text-zinc-400">14:22:01.045892</td>
+                <td class="px-4 py-2">03</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-700 px-1.5 py-0.5 rounded border border-white/10 text-white"
+                    >892</span
+                  >
+                  <span class="text-white font-medium">java</span>
+                </td>
+                <td class="px-4 py-2 font-bold">futex</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (0x7f8a9c0b29d0, FUTEX_WAIT_PRIVATE, 0, NULL)
+                </td>
+                <td class="px-4 py-2 text-right">
+                  <span
+                    class="text-white bg-white/20 px-1.5 py-0.5 rounded shadow-sm"
+                    >-11 (EAGAIN)</span
+                  >
+                </td>
+                <td class="px-4 py-2 text-right text-white">1.240 ms</td>
+              </tr>
+
+              <!-- Normal Row -->
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.046011</td>
+                <td class="px-4 py-2">02</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >4409</span
+                  >
+                  <span class="text-zinc-300">node</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">mmap</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)
+                </td>
+                <td class="px-4 py-2 text-right text-zinc-300">
+                  0x7f8aa0000000
+                </td>
+                <td class="px-4 py-2 text-right">0.021 ms</td>
+              </tr>
+
+              <!-- Normal Row -->
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.046555</td>
+                <td class="px-4 py-2">04</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >3401</span
+                  >
+                  <span class="text-zinc-300">nginx</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">recvfrom</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (14, "GET /api/v1/status HTTP/1.1\r\n...", 4096, 0, NULL,
+                  NULL)
+                </td>
+                <td class="px-4 py-2 text-right text-zinc-300">342</td>
+                <td class="px-4 py-2 text-right">0.018 ms</td>
+              </tr>
+              <!-- Fill to ensure scroll -->
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.046612</td>
+                <td class="px-4 py-2">02</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >3401</span
+                  ><span class="text-zinc-300">nginx</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">clock_gettime</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (CLOCK_MONOTONIC, {tv_sec=16845, tv_nsec=9238471})
+                </td>
+                <td class="px-4 py-2 text-right text-zinc-300">0</td>
+                <td class="px-4 py-2 text-right">0.005 ms</td>
+              </tr>
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.046890</td>
+                <td class="px-4 py-2">01</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >1104</span
+                  ><span class="text-zinc-300">postgres</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">fsync</td>
+                <td class="px-4 py-2 truncate max-w-md">(23)</td>
+                <td class="px-4 py-2 text-right text-zinc-300">0</td>
+                <td class="px-4 py-2 text-right text-white font-medium">
+                  45.200 ms
+                </td>
+              </tr>
+              <tr
+                class="hover:bg-zinc-800/40 transition-colors cursor-pointer text-zinc-400"
+              >
+                <td class="px-4 py-2 text-zinc-500">14:22:01.047010</td>
+                <td class="px-4 py-2">03</td>
+                <td class="px-4 py-2 flex items-center gap-2">
+                  <span
+                    class="bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5"
+                    >4409</span
+                  ><span class="text-zinc-300">node</span>
+                </td>
+                <td class="px-4 py-2 text-zinc-200">write</td>
+                <td class="px-4 py-2 truncate max-w-md">
+                  (1, "Process ready\n", 14)
+                </td>
+                <td class="px-4 py-2 text-right text-zinc-300">14</td>
+                <td class="px-4 py-2 text-right">0.008 ms</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Resizer Handle -->
+        <div
+          class="h-1 bg-zinc-900 border-t border-b border-white/[0.04] resizer z-20 shrink-0"
+        ></div>
+
+        <!-- Bottom Pane: Inspector Detail View -->
+        <div
+          class="h-[35%] min-h-[250px] glass-panel border-t-0 flex flex-col shrink-0"
+        >
+          <!-- Inspector Header -->
+          <div
+            class="h-10 border-b border-white/[0.04] flex items-center justify-between px-4 bg-zinc-900/50"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-semibold text-white"
+                >Syscall Detail</span
+              >
+              <div class="h-3 w-px bg-white/20"></div>
+              <span
+                class="text-xs font-mono text-zinc-300 bg-zinc-800 px-2 py-0.5 rounded-sm border border-white/10"
+                >futex</span
+              >
+            </div>
+            <div class="flex items-center gap-2">
+              <!-- Mini Tabs -->
+              <div
+                class="flex bg-zinc-900/80 rounded-md p-0.5 border border-white/5"
+              >
+                <button
+                  class="px-2.5 py-1 text-[10px] font-medium text-white bg-zinc-800 shadow-sm rounded border border-white/5"
+                >
+                  Overview
+                </button>
+                <button
+                  class="px-2.5 py-1 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  Stack Trace
+                </button>
+                <button
+                  class="px-2.5 py-1 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  Hex Dump
+                </button>
+              </div>
+              <button
+                class="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Inspector Content Grid -->
+          <div class="flex-1 flex overflow-hidden">
+            <!-- Left Column: Summary -->
+            <div class="w-1/3 border-r border-white/[0.04] p-4 overflow-y-auto">
+              <h3
+                class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-3"
+              >
+                Execution Context
+              </h3>
+              <div class="space-y-3 font-mono text-xs">
+                <div class="flex flex-col gap-1">
+                  <span class="text-zinc-500">Timestamp</span>
+                  <span class="text-zinc-200">2026-04-14 14:22:01.045892</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-zinc-500">Process</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-zinc-200">java</span>
+                    <span class="text-zinc-500">PID: 892</span>
+                    <span class="text-zinc-500">TID: 901</span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-zinc-500">Execution Time</span>
+                  <span class="text-white">1.240 ms</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-zinc-500">Return State</span>
+                  <span class="text-zinc-200">-11</span>
+                  <span
+                    class="inline-flex items-center text-white bg-white/10 px-2 py-0.5 rounded border border-white/10 w-max text-[11px]"
+                    >EAGAIN (Resource temporarily unavailable)</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Middle Column: Arguments Breakdown -->
+            <div class="w-1/3 border-r border-white/[0.04] p-4 overflow-y-auto">
+              <h3
+                class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-3"
+              >
+                Parsed Arguments
+              </h3>
+              <div
+                class="bg-zinc-950/50 rounded-lg border border-white/[0.05] p-3 font-mono text-xs text-zinc-400"
+              >
+                <div class="flex mb-1.5">
+                  <span class="text-zinc-500 w-16 shrink-0">uaddr:</span>
+                  <span class="text-zinc-200 break-all">0x7f8a9c0b29d0</span>
+                </div>
+                <div class="flex mb-1.5">
+                  <span class="text-zinc-500 w-16 shrink-0">op:</span>
+                  <span class="text-zinc-200">FUTEX_WAIT_PRIVATE</span>
+                </div>
+                <div class="flex mb-1.5">
+                  <span class="text-zinc-500 w-16 shrink-0">val:</span>
+                  <span class="text-zinc-200">0</span>
+                </div>
+                <div class="flex mb-1.5">
+                  <span class="text-zinc-500 w-16 shrink-0">utime:</span>
+                  <span class="text-zinc-500 italic">NULL</span>
+                </div>
+                <div class="flex mb-1.5">
+                  <span class="text-zinc-500 w-16 shrink-0">uaddr2:</span>
+                  <span class="text-zinc-500 italic">NULL</span>
+                </div>
+                <div class="flex">
+                  <span class="text-zinc-500 w-16 shrink-0">val3:</span>
+                  <span class="text-zinc-200">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Stack / Kernel Info -->
+            <div class="w-1/3 p-4 overflow-y-auto">
+              <h3
+                class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-3"
+              >
+                User Stack Trace
+              </h3>
+              <div
+                class="font-mono text-[10px] text-zinc-500 leading-relaxed bg-zinc-900/30 p-2 rounded"
+              >
+                <div
+                  class="hover:text-zinc-300 transition-colors cursor-pointer"
+                >
+                  0x00007f8ab28c9a3d __lll_lock_wait + 0x1d
+                </div>
+                <div
+                  class="hover:text-zinc-300 transition-colors cursor-pointer text-zinc-400"
+                >
+                  0x00007f8ab28c4e44 __pthread_mutex_lock + 0x114
+                </div>
+                <div
+                  class="hover:text-zinc-300 transition-colors cursor-pointer"
+                >
+                  0x00007f8ab1e83921 ObjectMonitor::enter(TRAPS) + 0x241
+                </div>
+                <div
+                  class="hover:text-zinc-300 transition-colors cursor-pointer"
+                >
+                  0x00007f8ab1ff8334 SharedRuntime::complete_monitor_locking_C +
+                  0x94
+                </div>
+                <div
+                  class="hover:text-zinc-300 transition-colors cursor-pointer opacity-70"
+                >
+                  ... 8 more frames
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Initialize Lucide Icons
+      lucide.createIcons();
+    </script>
+  </body>
+</html>

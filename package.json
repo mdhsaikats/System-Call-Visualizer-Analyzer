@@ -23,5 +23,8 @@
   },
   "devDependencies": {
     "electron": "^41.2.0"
+  },
+  "dependencies": {
+    "firebase": "^12.12.0"
   }
 }

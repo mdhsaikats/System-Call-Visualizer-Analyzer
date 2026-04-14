@@ -1,92 +1,220 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Perfect Cold Coffee</title>
+    <title>Sign In - SysTrace OS</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: [
+                "ui-monospace",
+                "SFMono-Regular",
+                "Menlo",
+                "Monaco",
+                "Consolas",
+                "Liberation Mono",
+                "Courier New",
+                "monospace",
+              ],
+            },
+            colors: {
+              zinc: {
+                850: "#202024",
+                950: "#09090b",
+              },
+            },
+            boxShadow: {
+              glass: "0 4px 30px rgba(0, 0, 0, 0.5)",
+              "inner-light": "inset 0 1px 0 0 rgba(255, 255, 255, 0.05)",
+              glow: "0 0 20px -5px rgba(255,255,255,0.3)",
+              "glow-hover": "0 0 25px -5px rgba(255,255,255,0.5)",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Subtle Grid Pattern Background */
+      .bg-grid {
+        background-size: 40px 40px;
+        background-image:
+          linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          );
+      }
+
+      /* Glassmorphism Utilities */
+      .glass-card {
+        background: rgba(24, 24, 27, 0.4); /* zinc-900 with opacity */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow:
+          inset 0 1px 0 0 rgba(255, 255, 255, 0.02),
+          0 20px 40px -10px rgba(0, 0, 0, 0.7);
+      }
+    </style>
   </head>
   <body
-    class="bg-gradient-to-br from-amber-50 via-white to-blue-50 min-h-screen text-gray-800"
+    class="bg-[#050505] text-zinc-300 font-sans antialiased h-screen w-screen overflow-hidden flex items-center justify-center selection:bg-zinc-700 selection:text-white bg-grid relative"
   >
-    <!-- Hero Section -->
-    <section
-      class="flex flex-col items-center justify-center text-center px-6 py-20"
-    >
-      <h1 class="text-5xl md:text-6xl font-bold text-amber-900 mb-4">
-        Perfect Cold Coffee ☕❄️
-      </h1>
-      <p class="text-lg md:text-xl text-gray-600 max-w-2xl">
-        Make café-style iced coffee at home using your espresso machine. Smooth,
-        creamy, and refreshing.
-      </p>
-      <button
-        class="mt-6 px-6 py-3 bg-amber-800 text-white rounded-2xl shadow-lg hover:bg-amber-900 transition"
+    <!-- Ambient Background Glow -->
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-white/[0.02] rounded-[100%] blur-[120px] pointer-events-none"
+    ></div>
+
+    <!-- Login Container -->
+    <main class="w-full max-w-[420px] p-6 z-10 relative">
+      <div
+        class="glass-card rounded-[2rem] p-8 md:p-10 relative overflow-hidden hover:border hover:border-gray-100 translation duration-200 ease-in-out"
       >
-        Start Brewing
-      </button>
-    </section>
+        <!-- Header -->
+        <div class="flex flex-col items-center mb-8">
+          <div
+            class="w-14 h-14 rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-400 flex items-center justify-center shadow-glow mb-5 ring-1 ring-white/20"
+          >
+            <img src="../assets/icon.png" class="rounded-lg" />
+          </div>
+          <h1 class="text-2xl font-bold text-white tracking-tight mb-1.5">
+            SysTrace OS
+          </h1>
+          <p class="text-sm text-zinc-500 text-center font-medium">
+            Authenticate to access kernel observability
+          </p>
+        </div>
 
-    <!-- Recipe Cards -->
-    <section class="grid md:grid-cols-2 gap-6 px-6 max-w-5xl mx-auto">
-      <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <h2 class="text-2xl font-semibold mb-3">☕ Classic Iced Latte</h2>
-        <ul class="space-y-2 text-gray-700">
-          <li>• 1–2 shots espresso</li>
-          <li>• Cold milk</li>
-          <li>• Ice cubes</li>
-          <li>• Sugar (optional)</li>
-        </ul>
-        <p class="mt-4 text-sm text-gray-500">
-          Clean, smooth and refreshing coffee experience.
-        </p>
+        <!-- Form -->
+        <form class="flex flex-col gap-5">
+          <!-- Admin ID Input -->
+          <div class="space-y-1.5">
+            <label
+              class="text-xs font-semibold text-zinc-400 pl-1 uppercase tracking-wider"
+              >Admin ID</label
+            >
+            <div class="relative group">
+              <div
+                class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"
+              >
+                <i
+                  data-lucide="terminal"
+                  class="w-4 h-4 text-zinc-500 group-focus-within:text-zinc-300 transition-colors"
+                ></i>
+              </div>
+              <input
+                id="email"
+                type="email"
+                placeholder="root@kernel"
+                class="w-full bg-zinc-900/50 border border-white/5 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 focus:bg-zinc-800/80 transition-all duration-250 placeholder:text-zinc-600 shadow-inner"
+              />
+            </div>
+          </div>
+
+          <!-- Passkey Input -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between pl-1 pr-1">
+              <label
+                class="text-xs font-semibold text-zinc-400 uppercase tracking-wider"
+                >Passkey</label
+              >
+            </div>
+            <div class="relative group">
+              <div
+                class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"
+              >
+                <i
+                  data-lucide="key-round"
+                  class="w-4 h-4 text-zinc-500 group-focus-within:text-zinc-300 transition-colors"
+                ></i>
+              </div>
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••••••"
+                class="w-full bg-zinc-900/50 border border-white/5 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 focus:bg-zinc-800/80 transition-all duration-250 placeholder:text-zinc-600 shadow-inner"
+              />
+            </div>
+          </div>
+          <!-- Primary Button -->
+          <button
+            id="loginBtn"
+            type="button"
+            class="mt-2 w-full bg-white hover:bg-zinc-200 text-black font-semibold rounded-xl px-4 py-3 text-sm transition-all shadow-glow hover:shadow-glow-hover flex items-center justify-center gap-2 active:scale-[0.98]"
+          >
+            <span id="btnText">Initialize Session</span>
+
+            <!-- Arrow Icon -->
+            <i id="arrowIcon" data-lucide="arrow-right" class="w-4 h-4"></i>
+
+            <!-- Spinner -->
+            <svg
+              id="spinner"
+              class="hidden animate-spin h-5 w-5"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="black"
+                stroke-width="4"
+                fill="none"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="black"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              ></path>
+            </svg>
+          </button>
+          <p id="errorMsg" class="text-red-400 text-xs mt-2 hidden"></p>
+        </form>
       </div>
+    </main>
 
-      <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <h2 class="text-2xl font-semibold mb-3">🍦 Creamy Cold Coffee</h2>
-        <ul class="space-y-2 text-gray-700">
-          <li>• Espresso shot</li>
-          <li>• Cold milk</li>
-          <li>• Sugar</li>
-          <li>• Ice cubes</li>
-          <li>• Optional ice cream</li>
-        </ul>
-        <p class="mt-4 text-sm text-gray-500">
-          Thick, frothy café-style blended coffee.
-        </p>
-      </div>
-    </section>
-
-    <!-- Steps Section -->
-    <section class="mt-16 px-6 max-w-4xl mx-auto">
-      <h2 class="text-3xl font-bold text-center mb-8">How to Make It</h2>
-
-      <div class="space-y-4">
-        <div class="bg-white p-5 rounded-xl shadow flex gap-4">
-          <span class="text-2xl">1️⃣</span>
-          <p>Brew fresh espresso using your machine.</p>
-        </div>
-
-        <div class="bg-white p-5 rounded-xl shadow flex gap-4">
-          <span class="text-2xl">2️⃣</span>
-          <p>Fill glass with ice and cold milk.</p>
-        </div>
-
-        <div class="bg-white p-5 rounded-xl shadow flex gap-4">
-          <span class="text-2xl">3️⃣</span>
-          <p>Pour espresso slowly over milk.</p>
-        </div>
-
-        <div class="bg-white p-5 rounded-xl shadow flex gap-4">
-          <span class="text-2xl">4️⃣</span>
-          <p>Stir or blend for creamy texture.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="text-center py-10 text-gray-500 text-sm">
-      Built with ☕ and Tailwind CSS
-    </footer>
+    <!-- Version Footer -->
+    <div
+      class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 opacity-60"
+    >
+      <span class="text-[10px] font-mono text-zinc-500">SysTrace v2.4.1</span>
+      <span class="w-1 h-1 rounded-full bg-zinc-700"></span>
+      <span
+        class="text-[10px] font-mono text-zinc-500 flex items-center gap-1.5"
+      >
+        <span class="relative flex h-1.5 w-1.5">
+          <span
+            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex rounded-full h-1.5 w-1.5 bg-zinc-300"
+          ></span>
+        </span>
+        Node: us-east-kernel
+      </span>
+    </div>
+    <script type="module" src="js/renderer.js"></script>
   </body>
 </html>

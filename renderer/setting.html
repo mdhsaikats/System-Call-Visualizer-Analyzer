@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings - SysTrace OS</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: [
+                "ui-monospace",
+                "SFMono-Regular",
+                "Menlo",
+                "Monaco",
+                "Consolas",
+                "Liberation Mono",
+                "Courier New",
+                "monospace",
+              ],
+            },
+            colors: {
+              zinc: {
+                850: "#202024",
+                950: "#09090b",
+              },
+            },
+            boxShadow: {
+              glass: "0 4px 30px rgba(0, 0, 0, 0.5)",
+              "inner-light": "inset 0 1px 0 0 rgba(255, 255, 255, 0.05)",
+              glow: "0 0 20px -5px rgba(255,255,255,0.15)",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #52525b;
+      }
+
+      /* Background Grid */
+      .bg-grid {
+        background-size: 40px 40px;
+        background-image:
+          linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          );
+      }
+
+      /* Glassmorphism Utilities */
+      .glass-panel {
+        background: rgba(24, 24, 27, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow:
+          inset 0 1px 0 0 rgba(255, 255, 255, 0.02),
+          0 4px 20px -2px rgba(0, 0, 0, 0.4);
+      }
+
+      .glass-card {
+        background: rgba(39, 39, 42, 0.3);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Toggle Switch Custom */
+      .toggle-checkbox:checked {
+        right: 0;
+        border-color: #fff;
+      }
+      .toggle-checkbox:checked + .toggle-label {
+        background-color: #fff;
+      }
+      .toggle-checkbox:checked + .toggle-label:after {
+        transform: translateX(100%);
+        background-color: #000;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-[#050505] text-zinc-300 font-sans antialiased h-screen w-screen overflow-hidden flex selection:bg-zinc-700 selection:text-white bg-grid"
+  >
+    <!-- Sidebar -->
+    <aside
+      class="w-64 h-full glass-panel flex flex-col justify-between border-r border-white/[0.04] z-20 shrink-0"
+    >
+      <div>
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-white/[0.04]">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-7 h-7 rounded-lg bg-gradient-to-br from-zinc-200 to-zinc-500 flex items-center justify-center shadow-lg"
+            >
+              <i data-lucide="cpu" class="w-4 h-4 text-black"></i>
+            </div>
+            <span class="text-white font-semibold tracking-tight text-sm"
+              >SysTrace OS</span
+            >
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="p-4 space-y-1.5 mt-2">
+          <p
+            class="px-3 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase mb-3 mt-4"
+          >
+            Observability
+          </p>
+
+          <a
+            href="dashboard.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-zinc-800/80 text-zinc-100 shadow-inner-light ring-1 ring-white/10 transition-all duration-200 group"
+          >
+            <i data-lucide="activity" class="w-4 h-4 text-zinc-300"></i>
+            <span class="text-sm font-medium">Dashboard</span>
+          </a>
+          <a
+            href="systemcalls.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="terminal-square"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">System Calls</span>
+          </a>
+          <a
+            href="processtree.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="network"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Process Tree</span>
+          </a>
+          <a
+            href="performance.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="bar-chart-2"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Performance</span>
+          </a>
+
+          <p
+            class="px-3 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase mb-3 mt-8"
+          >
+            Configuration
+          </p>
+
+          <a
+            href="rules.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="filter"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Rules & Filters</span>
+          </a>
+          <a
+            href="setting.html"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40 transition-all duration-200 group"
+          >
+            <i
+              data-lucide="settings"
+              class="w-4 h-4 group-hover:text-zinc-300 transition-colors"
+            ></i>
+            <span class="text-sm font-medium">Settings</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="p-4 border-t border-white/[0.04]">
+        <div
+          class="flex items-center gap-3 bg-zinc-900/50 border border-white/5 rounded-xl p-3 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+        >
+          <div
+            class="w-8 h-8 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center shrink-0"
+          >
+            <i data-lucide="user" class="w-4 h-4 text-zinc-400"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-semibold text-zinc-200 truncate">
+              System Admin
+            </div>
+            <div class="text-[10px] text-zinc-500 truncate font-mono">
+              root@kernel
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative z-10">
+      <!-- Topbar -->
+      <header
+        class="h-16 glass-panel border-b border-white/[0.04] flex items-center justify-between px-8 shrink-0"
+      >
+        <div class="flex items-center gap-4">
+          <h1 class="text-xl font-bold text-white tracking-tight">Settings</h1>
+          <div class="h-4 w-px bg-white/10 mx-2"></div>
+          <span class="text-xs font-medium text-zinc-500"
+            >Manage platform preferences and agent configurations</span
+          >
+        </div>
+
+        <!-- Global Actions -->
+        <div class="flex items-center gap-4">
+          <button
+            class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-black text-sm font-semibold hover:bg-zinc-200 transition-colors shadow-glow hover:shadow-[0_0_25px_-5px_rgba(255,255,255,0.4)]"
+          >
+            Save Changes
+          </button>
+        </div>
+      </header>
+
+      <!-- Inner Layout -->
+      <div class="flex-1 flex overflow-hidden">
+        <!-- Settings Navigation (Inner Sidebar) -->
+        <div
+          class="w-64 flex flex-col border-r border-white/[0.04] bg-zinc-950/30 p-6 pt-8 gap-2 overflow-y-auto"
+        >
+          <h2
+            class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 px-3"
+          >
+            Preferences
+          </h2>
+          <a
+            href="#"
+            class="px-3 py-2 rounded-lg bg-zinc-800/80 text-white text-sm font-medium border border-white/5 shadow-inner-light"
+          >
+            Agent Configuration
+          </a>
+          <a
+            href="#"
+            class="px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 text-sm font-medium transition-colors"
+          >
+            General Display
+          </a>
+          <a
+            href="#"
+            class="px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 text-sm font-medium transition-colors"
+          >
+            Data Retention
+          </a>
+
+          <h2
+            class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 mt-6 px-3"
+          >
+            Access & Security
+          </h2>
+          <a
+            href="#"
+            class="px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 text-sm font-medium transition-colors"
+          >
+            API Keys
+          </a>
+          <a
+            href="#"
+            class="px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 text-sm font-medium transition-colors"
+          >
+            Team Members
+          </a>
+          <a
+            href="#"
+            class="px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 text-sm font-medium transition-colors"
+          >
+            Audit Logs
+          </a>
+        </div>
+
+        <!-- Settings Content Area -->
+        <div class="flex-1 overflow-y-auto p-8 lg:p-12">
+          <div class="max-w-3xl">
+            <!-- Header -->
+            <div class="mb-10">
+              <h2 class="text-2xl font-bold text-white tracking-tight mb-2">
+                Agent Configuration
+              </h2>
+              <p class="text-sm text-zinc-400">
+                Configure parameters for the eBPF kernel agent running on
+                connected nodes.
+              </p>
+            </div>
+
+            <!-- Settings Sections -->
+            <div class="space-y-10">
+              <!-- Section 1: Capture Parameters -->
+              <section>
+                <h3
+                  class="text-sm font-semibold text-zinc-200 mb-5 pb-2 border-b border-white/[0.04]"
+                >
+                  Capture Parameters
+                </h3>
+
+                <div class="space-y-6">
+                  <!-- Buffer Size -->
+                  <div class="flex flex-col gap-2">
+                    <label
+                      class="text-xs font-semibold text-zinc-400 uppercase tracking-wider"
+                      >Ring Buffer Size (per CPU)</label
+                    >
+                    <p class="text-[11px] text-zinc-500 mb-1">
+                      Determines the amount of memory allocated for intercepting
+                      system calls before flushing to user space.
+                    </p>
+                    <div class="flex items-center gap-3">
+                      <input
+                        type="number"
+                        value="16"
+                        class="w-32 bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all shadow-inner"
+                      />
+                      <select
+                        class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20 appearance-none shadow-inner"
+                      >
+                        <option>MB</option>
+                        <option>GB</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Polling Interval -->
+                  <div class="flex flex-col gap-2">
+                    <label
+                      class="text-xs font-semibold text-zinc-400 uppercase tracking-wider"
+                      >User-space Polling Interval</label
+                    >
+                    <div class="flex items-center gap-3">
+                      <input
+                        type="number"
+                        value="100"
+                        class="w-32 bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all shadow-inner"
+                      />
+                      <span class="text-sm text-zinc-500 font-mono"
+                        >milliseconds</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Section 2: Tracing Features -->
+              <section>
+                <h3
+                  class="text-sm font-semibold text-zinc-200 mb-5 pb-2 border-b border-white/[0.04]"
+                >
+                  Tracing Features
+                </h3>
+
+                <div class="space-y-4">
+                  <!-- Feature Toggle 1 -->
+                  <div
+                    class="glass-card rounded-xl p-5 flex items-center justify-between"
+                  >
+                    <div>
+                      <h4 class="text-sm font-semibold text-white mb-1">
+                        Deep Argument Parsing
+                      </h4>
+                      <p class="text-xs text-zinc-500 max-w-md">
+                        Extract and decode complex struct arguments and string
+                        payloads from system calls. May increase CPU overhead by
+                        ~2%.
+                      </p>
+                    </div>
+                    <div
+                      class="relative inline-block w-10 h-5 align-middle select-none transition duration-200 ease-in ml-4"
+                    >
+                      <input
+                        type="checkbox"
+                        name="toggle"
+                        id="toggle_args"
+                        class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-zinc-400 border-4 appearance-none cursor-pointer z-10 transition-transform duration-200"
+                        checked
+                      />
+                      <label
+                        for="toggle_args"
+                        class="toggle-label block overflow-hidden h-5 rounded-full bg-zinc-700 cursor-pointer transition-colors duration-200"
+                      ></label>
+                    </div>
+                  </div>
+
+                  <!-- Feature Toggle 2 -->
+                  <div
+                    class="glass-card rounded-xl p-5 flex items-center justify-between"
+                  >
+                    <div>
+                      <h4 class="text-sm font-semibold text-white mb-1">
+                        Stack Trace Collection
+                      </h4>
+                      <p class="text-xs text-zinc-500 max-w-md">
+                        Capture user and kernel space stack traces for selected
+                        system calls. High memory overhead.
+                      </p>
+                    </div>
+                    <div
+                      class="relative inline-block w-10 h-5 align-middle select-none transition duration-200 ease-in ml-4"
+                    >
+                      <input
+                        type="checkbox"
+                        name="toggle"
+                        id="toggle_stack"
+                        class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-zinc-400 border-4 appearance-none cursor-pointer z-10 transition-transform duration-200"
+                      />
+                      <label
+                        for="toggle_stack"
+                        class="toggle-label block overflow-hidden h-5 rounded-full bg-zinc-800 border border-white/5 cursor-pointer transition-colors duration-200"
+                      ></label>
+                    </div>
+                  </div>
+
+                  <!-- Feature Toggle 3 -->
+                  <div
+                    class="glass-card rounded-xl p-5 flex items-center justify-between"
+                  >
+                    <div>
+                      <h4 class="text-sm font-semibold text-white mb-1">
+                        Network Packet Capture (PCAP)
+                      </h4>
+                      <p class="text-xs text-zinc-500 max-w-md">
+                        Enable full payload capture on socket operations.
+                        Warning: Extremely high disk I/O.
+                      </p>
+                    </div>
+                    <div
+                      class="relative inline-block w-10 h-5 align-middle select-none transition duration-200 ease-in ml-4"
+                    >
+                      <input
+                        type="checkbox"
+                        name="toggle"
+                        id="toggle_pcap"
+                        class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-zinc-400 border-4 appearance-none cursor-pointer z-10 transition-transform duration-200"
+                      />
+                      <label
+                        for="toggle_pcap"
+                        class="toggle-label block overflow-hidden h-5 rounded-full bg-zinc-800 border border-white/5 cursor-pointer transition-colors duration-200"
+                      ></label>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Section 3: Node Management -->
+              <section>
+                <h3
+                  class="text-sm font-semibold text-zinc-200 mb-5 pb-2 border-b border-white/[0.04]"
+                >
+                  Danger Zone
+                </h3>
+
+                <div
+                  class="border border-red-900/50 bg-red-950/10 rounded-xl p-5 flex items-center justify-between relative overflow-hidden"
+                >
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-1 bg-red-900/50"
+                  ></div>
+                  <div>
+                    <h4 class="text-sm font-semibold text-white mb-1">
+                      Restart eBPF Agent
+                    </h4>
+                    <p class="text-xs text-zinc-500 max-w-md">
+                      Forces the agent to detach all probes, clear buffers, and
+                      re-attach. Expect a brief interruption in telemetry.
+                    </p>
+                  </div>
+                  <button
+                    class="px-4 py-2 rounded-lg bg-transparent border border-red-900/50 text-red-400 text-xs font-semibold hover:bg-red-950/30 transition-colors ml-4 whitespace-nowrap"
+                  >
+                    Restart Agent
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <div class="h-16"></div>
+            <!-- Bottom padding -->
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Initialize Lucide Icons
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
