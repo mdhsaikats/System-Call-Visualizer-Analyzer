@@ -9,8 +9,9 @@ const createWindow = () => {
     height: 600,
     icon: path.join(__dirname, "assets/icon.png"),
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 
@@ -27,6 +28,7 @@ const createWindow = () => {
 // When Electron is ready
 app.whenReady().then(() => {
   createWindow();
+  startSysCallMonitor();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -39,3 +41,28 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
+
+function getSystemCalls(callback) {
+  exec(
+    `powershell "Get-Counter '\\System\\System Calls/sec' | Select-Object -ExpandProperty CounterSamples | Select-Object -ExpandProperty CookedValue"`,
+    (err, stdout) => {
+      if (err) {
+        callback(0);
+        return;
+      }
+
+      const value = parseFloat(stdout.trim());
+      callback(isNaN(value) ? 0 : value);
+    },
+  );
+}
+
+function startSysCallMonitor() {
+  setInterval(() => {
+    getSystemCalls((value) => {
+      if (win && win.webContents) {
+        win.webContents.send("syscalls", value);
+      }
+    });
+  }, 1000);
+}
