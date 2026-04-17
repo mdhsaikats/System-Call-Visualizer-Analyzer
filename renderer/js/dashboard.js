@@ -161,26 +161,4 @@ function updateChart(ioCount, netCount) {
   `;
 }
 
-// --- IPC DATA LISTENER ---
-if (window.api && typeof window.api.onSyscalls === "function") {
-  window.api.onSyscalls((data) => {
-    // 1. Update the Main Metric Cards (Fixing the object bug)
-    if (sysCallBox) sysCallBox.textContent = data.callsPerSec.toString();
-
-    const latencyBox = document.getElementById("latency");
-    if (latencyBox) latencyBox.textContent = `${data.latency.toFixed(2)} ms`;
-
-    const avgLatencyBox = document.getElementById("avgLatency");
-    if (avgLatencyBox)
-      avgLatencyBox.textContent = `${data.avgLatency.toFixed(2)}`;
-
-    const errorRateBox = document.getElementById("errorRate");
-    if (errorRateBox)
-      errorRateBox.textContent = `${data.errorRate.toFixed(2)}%`;
-
-    // 2. Update the SVG Chart
-    if (data.ioCount !== undefined && data.networkCount !== undefined) {
-      updateChart(data.ioCount, data.networkCount);
-    }
-  });
-}
+// (Removed duplicate onSyscalls listener)
