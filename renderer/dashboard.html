@@ -364,8 +364,7 @@
               </div>
 
               <!-- Simulated Chart Area -->
-              <div
-                class="relative flex-1 min-h-[220px] w-full border-b border-l border-white/[0.05] pb-2 pl-2"
+              <div class="relative flex-1 min-h-[220px] w-full border-b border-l border-white/[0.05] pb-2 pl-2" id="chartSvgArea">
               >
                 <!-- Y-axis labels -->
                 <div
@@ -396,25 +395,10 @@
                   viewBox="0 0 100 100"
                 >
                   <!-- Line 1 (Network) -->
-                  <path
-                    class="chart-path"
-                    d="M0,80 Q10,75 20,60 T40,50 T60,65 T80,30 T100,40"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.8)"
-                    stroke-width="1.5"
-                    vector-effect="non-scaling-stroke"
-                  />
+                  
 
                   <!-- Line 2 (I/O) -->
-                  <path
-                    class="chart-path"
-                    d="M0,90 Q15,85 25,95 T50,70 T75,80 T100,60"
-                    fill="none"
-                    stroke="rgba(161, 161, 170, 0.5)"
-                    stroke-width="1.5"
-                    stroke-dasharray="2,2"
-                    vector-effect="non-scaling-stroke"
-                  />
+                  
                 </svg>
 
                 <!-- X-axis labels -->
@@ -458,95 +442,7 @@
                 >
               </div>
 
-              <div class="flex-1 flex flex-col gap-3 overflow-y-auto pr-2">
-                <!-- Alert Item -->
-                <div
-                  class="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 flex gap-3 hover:bg-zinc-800/50 transition-colors cursor-pointer group"
-                >
-                  <div
-                    class="mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
-                  >
-                    <i
-                      data-lucide="shield-alert"
-                      class="w-4 h-4 text-zinc-300"
-                    ></i>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-semibold text-zinc-200"
-                        >High EACCES Rate</span
-                      >
-                      <span class="text-[9px] text-zinc-500 font-mono"
-                        >2m ago</span
-                      >
-                    </div>
-                    <p class="text-xs text-zinc-400 leading-relaxed">
-                      Process
-                      <code
-                        class="font-mono text-zinc-300 bg-zinc-800 px-1 py-0.5 rounded"
-                        >nginx (pid:3401)</code
-                      >
-                      generating excessive permission errors on open().
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Alert Item -->
-                <div
-                  class="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 flex gap-3 hover:bg-zinc-800/50 transition-colors cursor-pointer group"
-                >
-                  <div
-                    class="mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
-                  >
-                    <i data-lucide="cpu" class="w-4 h-4 text-zinc-300"></i>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-semibold text-zinc-200"
-                        >Futex Deadlock Risk</span
-                      >
-                      <span class="text-[9px] text-zinc-500 font-mono"
-                        >15m ago</span
-                      >
-                    </div>
-                    <p class="text-xs text-zinc-400 leading-relaxed">
-                      Long-waiting futex detected in
-                      <code
-                        class="font-mono text-zinc-300 bg-zinc-800 px-1 py-0.5 rounded"
-                        >java (pid:892)</code
-                      >. Latency > 500ms.
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Alert Item -->
-                <div
-                  class="p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 flex gap-3 hover:bg-zinc-800/50 transition-colors cursor-pointer group"
-                >
-                  <div
-                    class="mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
-                  >
-                    <i
-                      data-lucide="hard-drive"
-                      class="w-4 h-4 text-zinc-300"
-                    ></i>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-semibold text-zinc-200"
-                        >I/O Bottleneck</span
-                      >
-                      <span class="text-[9px] text-zinc-500 font-mono"
-                        >1h ago</span
-                      >
-                    </div>
-                    <p class="text-xs text-zinc-400 leading-relaxed">
-                      fsync() calls averaging 45ms across block device sda1.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+              <div class="flex-1 flex flex-col gap-3 overflow-y-auto pr-2" id="alertsList"></div>
               <button
                 class="mt-4 text-xs font-medium text-zinc-500 hover:text-zinc-300 w-full text-center transition-colors"
               >

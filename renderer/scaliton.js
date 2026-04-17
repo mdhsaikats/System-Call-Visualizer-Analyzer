@@ -51,6 +51,33 @@ function renderSkeleton() {
         tableBody.appendChild(tr);
     }
   }
+
+  // Anomalies List Skeleton
+  const alertsList = document.getElementById("alertsList");
+  if (alertsList) {
+    alertsList.innerHTML = "";
+    for(let i=0; i<3; i++) {
+        const div = document.createElement("div");
+        div.className = "p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/50 flex gap-3";
+        div.innerHTML = `
+            <div class="mt-0.5"><div class="w-4 h-4 bg-zinc-700/50 rounded animate-pulse"></div></div>
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="h-3 bg-zinc-700/50 rounded w-24 animate-pulse"></div>
+                    <div class="h-2 bg-zinc-700/50 rounded w-12 animate-pulse"></div>
+                </div>
+                <div class="h-3 bg-zinc-700/50 rounded w-full animate-pulse mt-1"></div>
+            </div>
+        `;
+        alertsList.appendChild(div);
+    }
+  }
+
+  // Chart Svg Area Skeleton
+  const chartSvgArea = document.getElementById("chartSvgArea");
+  if (chartSvgArea) {
+    chartSvgArea.innerHTML = `<div class="absolute inset-0 flex items-center justify-center pt-2 pl-2"><div class="w-full h-full bg-zinc-800/20 rounded animate-pulse border border-white/[0.02]"></div></div>`;
+  }
 }
 
 // Make it available globally if needed
