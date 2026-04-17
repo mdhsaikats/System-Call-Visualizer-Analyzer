@@ -109,10 +109,11 @@ if (window.api && typeof window.api.onSyscalls === "function") {
 // --- CHART RENDERING LOGIC ---
 const MAX_DATA_POINTS = 50;
 let chartHistory = [];
-const svgElement = document.querySelector("#chartSvgArea svg");
+// svgElement is now queried inside updateChart for reliability
 
 function updateChart(ioCount, netCount) {
   console.log("[updateChart] called with:", { ioCount, netCount });
+  const svgElement = document.querySelector("#chartSvgArea svg");
   if (!svgElement) {
     console.warn("[updateChart] svgElement not found!");
     return;
@@ -141,6 +142,32 @@ function updateChart(ioCount, netCount) {
     } else {
       ioPathD += `L ${x},${ioY} `;
       netPathD += `L ${x},${netY} `;
+    }
+
+    // 3. Update System Anomalies if present
+    if (Array.isArray(data.anomalies)) {
+      const alertsList = document.getElementById("alertsList");
+      if (alertsList) {
+        if (data.anomalies.length === 0) {
+          alertsList.innerHTML =
+            '<div class="text-xs text-zinc-500">No anomalies detected.</div>';
+        } else {
+          alertsList.innerHTML = data.anomalies
+            .map(
+              (anomaly) => `
+            <div class="bg-zinc-900/60 border border-white/5 rounded-lg p-3 flex items-center gap-3">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+              <div>
+                <div class="text-xs text-red-300 font-semibold">${anomaly.title || "Anomaly"}</div>
+                <div class="text-xs text-zinc-400">${anomaly.description || ""}</div>
+              </div>
+            </div>
+          `,
+            )
+            .join("");
+          if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+      }
     }
   });
 
