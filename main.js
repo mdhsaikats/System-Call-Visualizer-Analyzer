@@ -46,8 +46,12 @@ let errorCountGlobal = 0;
 
 function startPerfTrace() {
   console.log("Starting real perf trace...");
-  // Launching perf trace. Note: This assumes passwordless sudo or root execution.
-  const perf = spawn('sudo', ['perf', 'trace', '-a']);
+  // Launching perf trace directly. Run the Electron app as root instead of relying on sudo.
+  const perf = spawn('perf', ['trace', '-a']);
+
+  perf.on('error', (err) => {
+    console.error("Failed to start perf trace. Is 'perf' installed and in PATH?", err);
+  });
 
   const rl = readline.createInterface({
     input: perf.stderr, // perf trace routes its standard output to stderr
