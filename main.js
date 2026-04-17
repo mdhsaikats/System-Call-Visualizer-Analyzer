@@ -44,25 +44,37 @@ let totalCallsGlobal = 0;
 let totalLatencyGlobal = 0;
 let errorCountGlobal = 0;
 
+//for chart
+let ioCountSecond = 0;
+let netCountSecond = 0;
+
 function startPerfTrace() {
   console.log("Starting real perf trace...");
   // Launching perf trace with pkexec and the absolute path to the working perf binary
-  const perf = spawn('pkexec', ['/usr/lib/linux-tools/6.8.0-110-generic/perf', 'trace', '-a']);
+  const perf = spawn("pkexec", [
+    "/usr/lib/linux-tools/6.8.0-110-generic/perf",
+    "trace",
+    "-a",
+  ]);
 
-  perf.on('error', (err) => {
-    console.error("Failed to start perf trace. Is 'perf' installed and in PATH?", err);
+  perf.on("error", (err) => {
+    console.error(
+      "Failed to start perf trace. Is 'perf' installed and in PATH?",
+      err,
+    );
   });
 
   const rl = readline.createInterface({
     input: perf.stderr, // perf trace routes its standard output to stderr
-    crlfDelay: Infinity
+    crlfDelay: Infinity,
   });
 
   // Example perf trace format:
   // 3698.225 ( 0.015 ms): node/1234 mmap(...) = 0
-  const regex = /^\s*([\d.]+)\s*\(\s*([\d.]+)\s*ms\):\s*([^\/]+)\/(\d+)\s+([a-zA-Z0-9_]+)\((.*)\)\s*=\s*(.*)$/;
+  const regex =
+    /^\s*([\d.]+)\s*\(\s*([\d.]+)\s*ms\):\s*([^\/]+)\/(\d+)\s+([a-zA-Z0-9_]+)\((.*)\)\s*=\s*(.*)$/;
 
-  rl.on('line', (line) => {
+  rl.on("line", (line) => {
     const match = line.match(regex);
     if (!match) return;
 
@@ -74,6 +86,17 @@ function startPerfTrace() {
     const argsRaw = match[6];
     const retVal = match[7].trim();
 
+    if (syscall.includes("read") || syscall.includes("write")) {
+      ioCountSecond++;
+    } else if (
+      syscall.includes("recv") ||
+      syscall.includes("send") ||
+      syscall.includes("socket") ||
+      syscall.includes("connect")
+    ) {
+      netCountSecond++;
+    }
+
     lastSecondCalls++;
     lastSecondLatencySum += latencyMs;
     totalCallsGlobal++;
@@ -81,7 +104,7 @@ function startPerfTrace() {
 
     // Check roughly for error (standard linux return pattern)
     // Often errors are returned as -1 or -ENOENT instead of just negative numbers in some hooks, but perf trace usually formats them with '-E...' or '-1'
-    const isError = retVal.startsWith('-') && !retVal.startsWith('-EAGAIN');
+    const isError = retVal.startsWith("-") && !retVal.startsWith("-EAGAIN");
     if (isError) errorCountGlobal++;
 
     const now = new Date();
@@ -91,7 +114,7 @@ function startPerfTrace() {
       pid: pid,
       process: processName,
       syscall: syscall,
-      args: argsRaw.length > 60 ? argsRaw.substring(0, 57) + '...' : argsRaw,
+      args: argsRaw.length > 60 ? argsRaw.substring(0, 57) + "..." : argsRaw,
       returnVal: retVal,
       latency: latencyMs.toFixed(3),
       isError: isError,
@@ -102,8 +125,10 @@ function startPerfTrace() {
     }
   });
 
-  perf.on('close', (code) => {
-    console.log(`perf trace process exited with code ${code}. Did you run with root permissions?`);
+  perf.on("close", (code) => {
+    console.log(
+      `perf trace process exited with code ${code}. Did you run with root permissions?`,
+    );
   });
 }
 
@@ -142,12 +167,21 @@ function startSysCallMonitor() {
 
   setInterval(() => {
     const callsPerSec = lastSecondCalls;
-    const currentLatency = callsPerSec > 0 ? (lastSecondLatencySum / callsPerSec) : 0;
-    const globalAvgLatency = totalCallsGlobal > 0 ? (totalLatencyGlobal / totalCallsGlobal) : 0;
-    const errorRate = totalCallsGlobal > 0 ? (errorCountGlobal / totalCallsGlobal) * 100 : 0;
+    const currentLatency =
+      callsPerSec > 0 ? lastSecondLatencySum / callsPerSec : 0;
+    const globalAvgLatency =
+      totalCallsGlobal > 0 ? totalLatencyGlobal / totalCallsGlobal : 0;
+    const errorRate =
+      totalCallsGlobal > 0 ? (errorCountGlobal / totalCallsGlobal) * 100 : 0;
 
     // Copy to send via IPC
     const recentSyscalls = [...recentSyscallsBuffer];
+
+    // Grab the counts and reset them for the next second
+    const currentIo = ioCountSecond;
+    const currentNet = netCountSecond;
+    ioCountSecond = 0;
+    netCountSecond = 0;
 
     // Reset loop aggregators
     lastSecondCalls = 0;
@@ -164,6 +198,8 @@ function startSysCallMonitor() {
           errorRate: errorRate,
           topProcesses: top3,
           recentSyscalls: recentSyscalls,
+          ioCount: currentIo,
+          networkCount: currentNet,
         });
       }
     });
