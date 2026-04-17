@@ -97,7 +97,7 @@ if (window.api && typeof window.api.onSyscalls === "function") {
       typeof data.ioCount === "number" &&
       typeof data.networkCount === "number"
     ) {
-      updateChart(data.ioCount, data.networkCount);
+      updateChart(data.ioCount, data.networkCount, data);
     }
   });
 }
@@ -111,7 +111,7 @@ const MAX_DATA_POINTS = 50;
 let chartHistory = [];
 // svgElement is now queried inside updateChart for reliability
 
-function updateChart(ioCount, netCount) {
+function updateChart(ioCount, netCount, data) {
   console.log("[updateChart] called with:", { ioCount, netCount });
   const chartArea = document.getElementById("chartSvgArea");
   let svgElement = chartArea ? chartArea.querySelector("svg") : null;
@@ -156,33 +156,33 @@ function updateChart(ioCount, netCount) {
       ioPathD += `L ${x},${ioY} `;
       netPathD += `L ${x},${netY} `;
     }
+  });
 
-    // 3. Update System Anomalies if present
-    if (Array.isArray(data.anomalies)) {
-      const alertsList = document.getElementById("alertsList");
-      if (alertsList) {
-        if (data.anomalies.length === 0) {
-          alertsList.innerHTML =
-            '<div class="text-xs text-zinc-500">No anomalies detected.</div>';
-        } else {
-          alertsList.innerHTML = data.anomalies
-            .map(
-              (anomaly) => `
-            <div class="bg-zinc-900/60 border border-white/5 rounded-lg p-3 flex items-center gap-3">
-              <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
-              <div>
-                <div class="text-xs text-red-300 font-semibold">${anomaly.title || "Anomaly"}</div>
-                <div class="text-xs text-zinc-400">${anomaly.description || ""}</div>
-              </div>
+  // Handle Anomalies OUTSIDE the loop safely
+  if (data && Array.isArray(data.anomalies)) {
+    const alertsList = document.getElementById("alertsList");
+    if (alertsList) {
+      if (data.anomalies.length === 0) {
+        alertsList.innerHTML =
+          '<div class="text-xs text-zinc-500">No anomalies detected.</div>';
+      } else {
+        alertsList.innerHTML = data.anomalies
+          .map(
+            (anomaly) => `
+          <div class="bg-zinc-900/60 border border-white/5 rounded-lg p-3 flex items-center gap-3">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+            <div>
+              <div class="text-xs text-red-300 font-semibold">${anomaly.title || "Anomaly"}</div>
+              <div class="text-xs text-zinc-400">${anomaly.description || ""}</div>
             </div>
-          `,
-            )
-            .join("");
-          if (typeof lucide !== "undefined") lucide.createIcons();
-        }
+          </div>
+        `,
+          )
+          .join("");
+        if (typeof lucide !== "undefined") lucide.createIcons();
       }
     }
-  });
+  }
 
   // Inject the dynamically generated paths
   svgElement.innerHTML = `
@@ -194,7 +194,6 @@ function updateChart(ioCount, netCount) {
       stroke-dasharray="4 2" 
       vector-effect="non-scaling-stroke"
     />
-    
     <path 
       d="${netPathD}" 
       fill="none" 
