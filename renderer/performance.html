@@ -262,6 +262,7 @@
             <!-- CPU Metric -->
             <div
               class="glass-card rounded-2xl p-5 relative overflow-hidden group"
+              data-metric="cpu"
             >
               <div class="flex justify-between items-start mb-4">
                 <h3
@@ -272,13 +273,13 @@
                 <i data-lucide="cpu" class="w-4 h-4 text-zinc-500"></i>
               </div>
               <div class="flex items-end gap-2 mb-2">
-                <span class="text-3xl font-bold text-white tracking-tight"
-                  >42.8%</span
+                <span class="text-3xl font-bold text-white tracking-tight" data-value
+                  >--</span
                 >
                 <span class="text-xs font-mono text-zinc-500 mb-1">avg</span>
               </div>
               <!-- Mini Bar Chart -->
-              <div class="h-6 flex items-end gap-0.5 mt-4 opacity-70">
+              <div class="h-6 flex items-end gap-0.5 mt-4 opacity-70" data-bars>
                 <div class="w-full bg-zinc-700 h-[30%] rounded-sm"></div>
                 <div class="w-full bg-zinc-600 h-[45%] rounded-sm"></div>
                 <div class="w-full bg-zinc-500 h-[40%] rounded-sm"></div>
@@ -294,6 +295,7 @@
             <!-- Memory Metric -->
             <div
               class="glass-card rounded-2xl p-5 relative overflow-hidden group"
+              data-metric="memory"
             >
               <div class="flex justify-between items-start mb-4">
                 <h3
@@ -304,11 +306,11 @@
                 <i data-lucide="server" class="w-4 h-4 text-zinc-500"></i>
               </div>
               <div class="flex items-end gap-2 mb-2">
-                <span class="text-3xl font-bold text-white tracking-tight"
-                  >84.2</span
+                <span class="text-3xl font-bold text-white tracking-tight" data-value
+                  >--</span
                 >
-                <span class="text-sm font-medium text-zinc-500 mb-1"
-                  >/ 128 GB</span
+                <span class="text-sm font-medium text-zinc-500 mb-1" data-total
+                  >/ -- GB</span
                 >
               </div>
               <!-- Progress Bar -->
@@ -316,13 +318,13 @@
                 <div
                   class="flex justify-between text-[10px] font-mono text-zinc-500"
                 >
-                  <span>Used: 65%</span>
+                  <span>Used: <span data-used>0%</span></span>
                   <span>Cached: 15%</span>
                 </div>
                 <div
                   class="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden flex"
                 >
-                  <div class="h-full bg-white w-[65%] rounded-l-full"></div>
+                  <div class="h-full bg-white w-[0%] rounded-l-full" data-bar></div>
                   <div class="h-full bg-zinc-500 w-[15%]"></div>
                 </div>
               </div>
@@ -331,6 +333,7 @@
             <!-- Disk I/O Metric -->
             <div
               class="glass-card rounded-2xl p-5 relative overflow-hidden group"
+              data-metric="disk"
             >
               <div class="flex justify-between items-start mb-4">
                 <h3
@@ -344,7 +347,7 @@
                 <div class="flex justify-between items-center">
                   <span class="text-xs font-medium text-zinc-500">Read</span>
                   <span class="text-sm font-mono text-white"
-                    >124
+                    ><span data-read>--</span>
                     <span class="text-zinc-500 text-[10px]">MB/s</span></span
                   >
                 </div>
@@ -352,7 +355,7 @@
                 <div class="flex justify-between items-center">
                   <span class="text-xs font-medium text-zinc-500">Write</span>
                   <span class="text-sm font-mono text-white"
-                    >86
+                    ><span data-write>--</span>
                     <span class="text-zinc-500 text-[10px]">MB/s</span></span
                   >
                 </div>
@@ -362,6 +365,7 @@
             <!-- Network Metric -->
             <div
               class="glass-card rounded-2xl p-5 relative overflow-hidden group"
+              data-metric="network"
             >
               <div class="flex justify-between items-start mb-4">
                 <h3
@@ -381,7 +385,7 @@
                     >In</span
                   >
                   <span class="text-sm font-mono text-white"
-                    >1.2
+                    ><span data-in>--</span>
                     <span class="text-zinc-500 text-[10px]">Gbps</span></span
                   >
                 </div>
@@ -395,7 +399,7 @@
                     >Out</span
                   >
                   <span class="text-sm font-mono text-white"
-                    >0.8
+                    ><span data-out>--</span>
                     <span class="text-zinc-500 text-[10px]">Gbps</span></span
                   >
                 </div>
@@ -639,75 +643,9 @@
               <!-- Flame Graph SVG/HTML Simulation -->
               <div
                 class="flex-1 min-h-[180px] w-full flex flex-col-reverse gap-[1px] font-mono text-[9px] cursor-crosshair"
+                id="flameGraphContainer"
               >
-                <!-- Root -->
-                <div
-                  class="w-full bg-zinc-800 border border-zinc-700/50 hover:border-white/50 hover:bg-zinc-700 transition-colors px-2 py-1 rounded-sm text-center text-zinc-400"
-                >
-                  all (100%)
-                </div>
-
-                <!-- Level 1 -->
-                <div class="w-full flex gap-[1px]">
-                  <div
-                    class="w-[70%] bg-zinc-700 border border-zinc-600/50 hover:border-white/50 hover:bg-zinc-600 transition-colors px-2 py-1 rounded-sm text-zinc-300 truncate text-center"
-                  >
-                    sys_entry (70%)
-                  </div>
-                  <div
-                    class="w-[30%] bg-zinc-800 border border-zinc-700/50 hover:border-white/50 hover:bg-zinc-700 transition-colors px-2 py-1 rounded-sm text-zinc-500 truncate text-center"
-                  >
-                    user_space (30%)
-                  </div>
-                </div>
-
-                <!-- Level 2 -->
-                <div class="w-full flex gap-[1px]">
-                  <div
-                    class="w-[40%] bg-zinc-600 border border-zinc-500/50 hover:border-white/50 hover:bg-zinc-500 transition-colors px-2 py-1 rounded-sm text-zinc-200 truncate text-center"
-                  >
-                    vfs_read (40%)
-                  </div>
-                  <div
-                    class="w-[30%] bg-zinc-700 border border-zinc-600/50 hover:border-white/50 hover:bg-zinc-600 transition-colors px-2 py-1 rounded-sm text-zinc-400 truncate text-center"
-                  >
-                    tcp_recvmsg (30%)
-                  </div>
-                  <div
-                    class="w-[15%] bg-zinc-800 border border-zinc-700/50 hover:border-white/50 hover:bg-zinc-700 transition-colors px-2 py-1 rounded-sm text-zinc-500 truncate text-center"
-                  >
-                    JVM_loop
-                  </div>
-                  <div
-                    class="w-[15%] bg-transparent px-2 py-1 rounded-sm text-zinc-600 truncate text-center border border-dashed border-white/5"
-                  >
-                    idle
-                  </div>
-                </div>
-
-                <!-- Level 3 -->
-                <div class="w-full flex gap-[1px]">
-                  <div
-                    class="w-[25%] bg-white text-black font-bold border border-white hover:bg-zinc-200 transition-colors px-2 py-1 rounded-sm shadow-[0_0_10px_rgba(255,255,255,0.3)] truncate text-center"
-                  >
-                    ext4_file_read_iter
-                  </div>
-                  <div
-                    class="w-[15%] bg-zinc-600 border border-zinc-500/50 hover:border-white/50 hover:bg-zinc-500 transition-colors px-2 py-1 rounded-sm text-zinc-300 truncate text-center"
-                  >
-                    generic_file...
-                  </div>
-                  <div
-                    class="w-[20%] bg-zinc-700 border border-zinc-600/50 hover:border-white/50 hover:bg-zinc-600 transition-colors px-2 py-1 rounded-sm text-zinc-400 truncate text-center"
-                  >
-                    skb_copy...
-                  </div>
-                  <div
-                    class="w-[10%] bg-zinc-800 border border-zinc-700/50 hover:border-white/50 hover:bg-zinc-700 transition-colors px-2 py-1 rounded-sm text-zinc-500 truncate text-center"
-                  >
-                    lock_sock
-                  </div>
-                </div>
+                <div class="w-full text-center text-zinc-500 py-8">Loading stack traces...</div>
               </div>
             </div>
           </div>
@@ -721,5 +659,6 @@
       // Initialize Lucide Icons
       lucide.createIcons();
     </script>
+    <script src="js/performance.js"></script>
   </body>
 </html>

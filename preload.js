@@ -6,4 +6,13 @@ contextBridge.exposeInMainWorld("api", {
       callback(value);
     });
   },
+  getPerformanceData: async () => {
+    return await ipcRenderer.invoke("get-performance-data");
+  },
+  getSyscallLatencyDistribution: async () => {
+    return await ipcRenderer.invoke("get-syscall-latency-distribution");
+  },
+  getStackTraces: async () => {
+    return await ipcRenderer.invoke("get-stack-traces");
+  },
 });
