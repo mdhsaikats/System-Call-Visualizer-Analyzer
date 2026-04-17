@@ -113,9 +113,22 @@ let chartHistory = [];
 
 function updateChart(ioCount, netCount) {
   console.log("[updateChart] called with:", { ioCount, netCount });
-  const svgElement = document.querySelector("#chartSvgArea svg");
+  const chartArea = document.getElementById("chartSvgArea");
+  let svgElement = chartArea ? chartArea.querySelector("svg") : null;
+  if (!svgElement && chartArea) {
+    svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgElement.setAttribute(
+      "class",
+      "w-full h-full absolute inset-0 pt-2 pl-2 overflow-visible",
+    );
+    svgElement.setAttribute("preserveAspectRatio", "none");
+    svgElement.setAttribute("viewBox", "0 0 100 100");
+    chartArea.appendChild(svgElement);
+  }
   if (!svgElement) {
-    console.warn("[updateChart] svgElement not found!");
+    console.warn(
+      "[updateChart] svgElement not found and could not be created!",
+    );
     return;
   }
 
