@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
+const readline = require("readline");
 
 let win;
 
@@ -16,17 +17,10 @@ const createWindow = () => {
     },
   });
 
-  // Load your HTML file
   win.loadFile("renderer/index.html");
-
-  // Maximize window
   win.maximize();
-
-  // Optional: Open DevTools
-  // win.webContents.openDevTools();
 };
 
-// When Electron is ready
 app.whenReady().then(() => {
   createWindow();
   startSysCallMonitor();
@@ -36,48 +30,76 @@ app.whenReady().then(() => {
   });
 });
 
-// Quit when all windows are closed (except macOS)
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-const { performance } = require("perf_hooks");
+// State buffers for real-time trace
+let recentSyscallsBuffer = [];
+let lastSecondCalls = 0;
+let lastSecondLatencySum = 0;
+let totalCallsGlobal = 0;
+let totalLatencyGlobal = 0;
+let errorCountGlobal = 0;
 
-let errorCount = 0;
-let totalCalls = 0;
+function startPerfTrace() {
+  console.log("Starting real perf trace...");
+  // Launching perf trace. Note: This assumes passwordless sudo or root execution.
+  const perf = spawn('sudo', ['perf', 'trace', '-a']);
 
-let previousCtxt = 0;
-let lastSyscallTime = 0;
+  const rl = readline.createInterface({
+    input: perf.stderr, // perf trace routes its standard output to stderr
+    crlfDelay: Infinity
+  });
 
-function getSystemCalls(callback) {
-  const start = performance.now();
+  // Example perf trace format:
+  // 3698.225 ( 0.015 ms): node/1234 mmap(...) = 0
+  const regex = /^\s*([\d.]+)\s*\(\s*([\d.]+)\s*ms\):\s*([^\/]+)\/(\d+)\s+([a-zA-Z0-9_]+)\((.*)\)\s*=\s*(.*)$/;
 
-  exec(`cat /proc/stat | grep ctxt | awk '{print $2}'`, (err, stdout) => {
-    const end = performance.now();
-    const latency = end - start;
-    totalCalls++;
+  rl.on('line', (line) => {
+    const match = line.match(regex);
+    if (!match) return;
 
-    if (err) {
-      errorCount++;
-      callback(0, latency, true);
-      return;
+    const timeRaw = parseFloat(match[1]);
+    const latencyMs = parseFloat(match[2]);
+    const processName = match[3].trim();
+    const pid = match[4];
+    const syscall = match[5];
+    const argsRaw = match[6];
+    const retVal = match[7].trim();
+
+    lastSecondCalls++;
+    lastSecondLatencySum += latencyMs;
+    totalCallsGlobal++;
+    totalLatencyGlobal += latencyMs;
+
+    // Check roughly for error (standard linux return pattern)
+    // Often errors are returned as -1 or -ENOENT instead of just negative numbers in some hooks, but perf trace usually formats them with '-E...' or '-1'
+    const isError = retVal.startsWith('-') && !retVal.startsWith('-EAGAIN');
+    if (isError) errorCountGlobal++;
+
+    const now = new Date();
+
+    recentSyscallsBuffer.unshift({
+      time: now.toISOString().substr(11, 12),
+      pid: pid,
+      process: processName,
+      syscall: syscall,
+      args: argsRaw.length > 60 ? argsRaw.substring(0, 57) + '...' : argsRaw,
+      returnVal: retVal,
+      latency: latencyMs.toFixed(3),
+      isError: isError,
+    });
+
+    if (recentSyscallsBuffer.length > 5) {
+      recentSyscallsBuffer.pop();
     }
+  });
 
-    const currentCtxt = parseInt(stdout.trim(), 10);
-    const now = Date.now();
-    let rate = 0;
-
-    if (previousCtxt !== 0 && lastSyscallTime !== 0) {
-      const timeDiffSec = (now - lastSyscallTime) / 1000;
-      rate = (currentCtxt - previousCtxt) / timeDiffSec;
-    }
-
-    previousCtxt = currentCtxt;
-    lastSyscallTime = now;
-
-    callback(isNaN(rate) || rate < 0 ? 0 : rate, latency, false);
+  perf.on('close', (code) => {
+    console.log(`perf trace process exited with code ${code}. Did you run with root permissions?`);
   });
 }
 
@@ -92,7 +114,7 @@ function getTopProcesses(callback) {
       }
 
       try {
-        const lines = stdout.trim().split("\n").slice(1); // skip header
+        const lines = stdout.trim().split("\n").slice(1);
         const data = lines.map((line) => {
           const parts = line.trim().split(/\s+/);
           return {
@@ -100,7 +122,7 @@ function getTopProcesses(callback) {
             CPU: parseFloat(parts[1]) || 0,
             Id: parseInt(parts[2], 10),
             HandleCount: parseInt(parts[3], 10),
-            WorkingSet64: parseInt(parts[4], 10) * 1024, // Convert KB to Bytes
+            WorkingSet64: parseInt(parts[4], 10) * 1024,
           };
         });
         callback(data);
@@ -111,77 +133,35 @@ function getTopProcesses(callback) {
   );
 }
 
-function generateRecentSyscalls(activeProcesses) {
-  if (!activeProcesses || activeProcesses.length === 0) return [];
-  const recent = [];
-  const now = new Date();
-
-  for (let i = 0; i < Math.min(5, activeProcesses.length); i++) {
-    const p = activeProcesses[i];
-
-    // Base latency off CPU usage to make it fully data-derived
-    const latency = ((p.CPU || 0.5) * (0.1 + Math.random() * 0.4)).toFixed(2);
-
-    // Real Linux kernel call equivalents based on the stat
-    const isMemoryEvent = i % 2 === 0;
-
-    const callName = isMemoryEvent ? "mmap" : "read";
-    const memMb = p.WorkingSet64
-      ? (p.WorkingSet64 / 1024 / 1024).toFixed(1) + "MB"
-      : "0MB";
-    const args = isMemoryEvent
-      ? `(length=${memMb}, prot=PROT_READ|PROT_WRITE)`
-      : `(fd=3, buf=..., count=1024)`;
-
-    const timeStr = new Date(now.getTime() - i * 15)
-      .toISOString()
-      .substr(11, 12);
-
-    recent.push({
-      time: timeStr,
-      pid: p.Id || 4,
-      process: p.Name || "System",
-      syscall: callName,
-      args: args,
-      returnVal: "0x0",
-      latency: latency,
-      isError: false,
-    });
-  }
-
-  return recent;
-}
-
-let totalLatency = 0;
-let count = 0;
-
 function startSysCallMonitor() {
+  startPerfTrace();
+
   setInterval(() => {
-    getSystemCalls((value, latency, isError) => {
-      totalLatency += latency;
-      count++;
+    const callsPerSec = lastSecondCalls;
+    const currentLatency = callsPerSec > 0 ? (lastSecondLatencySum / callsPerSec) : 0;
+    const globalAvgLatency = totalCallsGlobal > 0 ? (totalLatencyGlobal / totalCallsGlobal) : 0;
+    const errorRate = totalCallsGlobal > 0 ? (errorCountGlobal / totalCallsGlobal) * 100 : 0;
 
-      const avgLatency = totalLatency / count;
+    // Copy to send via IPC
+    const recentSyscalls = [...recentSyscallsBuffer];
 
-      const errorRate = totalCalls === 0 ? 0 : (errorCount / totalCalls) * 100;
+    // Reset loop aggregators
+    lastSecondCalls = 0;
+    lastSecondLatencySum = 0;
 
-      getTopProcesses((processes) => {
-        const recentSyscalls = generateRecentSyscalls(processes);
+    getTopProcesses((processes) => {
+      const top3 = processes.slice(0, 3);
 
-        // Take top 3 for the top processes card
-        const top3 = processes.slice(0, 3);
-
-        if (win && win.webContents) {
-          win.webContents.send("syscalls", {
-            callsPerSec: value,
-            latency,
-            avgLatency,
-            errorRate,
-            topProcesses: top3,
-            recentSyscalls: recentSyscalls,
-          });
-        }
-      });
+      if (win && win.webContents) {
+        win.webContents.send("syscalls", {
+          callsPerSec: callsPerSec,
+          latency: currentLatency,
+          avgLatency: globalAvgLatency,
+          errorRate: errorRate,
+          topProcesses: top3,
+          recentSyscalls: recentSyscalls,
+        });
+      }
     });
   }, 1000);
 }
