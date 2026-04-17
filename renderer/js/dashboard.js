@@ -112,7 +112,11 @@ let chartHistory = [];
 const svgElement = document.querySelector("#chartSvgArea svg");
 
 function updateChart(ioCount, netCount) {
-  if (!svgElement) return;
+  console.log("[updateChart] called with:", { ioCount, netCount });
+  if (!svgElement) {
+    console.warn("[updateChart] svgElement not found!");
+    return;
+  }
 
   chartHistory.push({ io: ioCount, net: netCount });
   if (chartHistory.length > MAX_DATA_POINTS) {
