@@ -57,9 +57,47 @@ if (logoutBtn) {
   });
 }
 
+// Unified and safe onSyscalls listener
 if (window.api && typeof window.api.onSyscalls === "function") {
-  window.api.onSyscalls((value) => {
-    sysCallBox.textContent = `${value.toFixed(2)} calls/sec`;
+  window.api.onSyscalls((data) => {
+    // Defensive: handle both number and object payloads
+    let callsPerSec = 0;
+    if (typeof data === "number") {
+      callsPerSec = data;
+    } else if (data && typeof data.callsPerSec === "number") {
+      callsPerSec = data.callsPerSec;
+    }
+    if (sysCallBox)
+      sysCallBox.textContent = `${Number(callsPerSec).toFixed(2)} calls/sec`;
+
+    const latencyBox = document.getElementById("latency");
+    const avgLatencyBox = document.getElementById("avgLatency");
+    const errorRateBox = document.getElementById("errorRate");
+
+    if (latencyBox) {
+      const latency =
+        data && typeof data.latency === "number" ? data.latency : 0;
+      latencyBox.textContent = `${latency.toFixed(2)} ms`;
+    }
+    if (avgLatencyBox) {
+      const avgLatency =
+        data && typeof data.avgLatency === "number" ? data.avgLatency : 0;
+      avgLatencyBox.textContent = `${avgLatency.toFixed(2)}`;
+    }
+    if (errorRateBox) {
+      const errorRate =
+        data && typeof data.errorRate === "number" ? data.errorRate : 0;
+      errorRateBox.textContent = `${errorRate.toFixed(2)}%`;
+    }
+
+    // 2. Update the SVG Chart
+    if (
+      data &&
+      typeof data.ioCount === "number" &&
+      typeof data.networkCount === "number"
+    ) {
+      updateChart(data.ioCount, data.networkCount);
+    }
   });
 }
 
