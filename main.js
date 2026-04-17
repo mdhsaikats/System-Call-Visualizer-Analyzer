@@ -190,6 +190,30 @@ function startSysCallMonitor() {
     getTopProcesses((processes) => {
       const top3 = processes.slice(0, 3);
 
+      // --- Anomaly Detection Logic ---
+      const activeAnomalies = [];
+      // High Error Rate (> 5%)
+      if (errorRate > 5) {
+        activeAnomalies.push({
+          title: "High Error Rate",
+          description: `Kernel returning errors for ${errorRate.toFixed(1)}% of calls.`,
+        });
+      }
+      // Latency Spike (> 10ms average per second)
+      if (currentLatency > 10) {
+        activeAnomalies.push({
+          title: "Latency Spike",
+          description: `Syscall latency jumped to ${currentLatency.toFixed(2)}ms.`,
+        });
+      }
+      // Syscall Storm (> 8000 calls/sec)
+      if (callsPerSec > 8000) {
+        activeAnomalies.push({
+          title: "Syscall Storm Detected",
+          description: `Unusual volume: ${callsPerSec} calls/sec.`,
+        });
+      }
+
       if (win && win.webContents) {
         win.webContents.send("syscalls", {
           callsPerSec: callsPerSec,
@@ -200,6 +224,7 @@ function startSysCallMonitor() {
           recentSyscalls: recentSyscalls,
           ioCount: currentIo,
           networkCount: currentNet,
+          anomalies: activeAnomalies,
         });
       }
     });
