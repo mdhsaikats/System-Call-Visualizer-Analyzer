@@ -46,8 +46,8 @@ let errorCountGlobal = 0;
 
 function startPerfTrace() {
   console.log("Starting real perf trace...");
-  // Launching perf trace directly. Run the Electron app as root instead of relying on sudo.
-  const perf = spawn('perf', ['trace', '-a']);
+  // Launching perf trace with pkexec and the absolute path to the working perf binary
+  const perf = spawn('pkexec', ['/usr/lib/linux-tools/6.8.0-110-generic/perf', 'trace', '-a']);
 
   perf.on('error', (err) => {
     console.error("Failed to start perf trace. Is 'perf' installed and in PATH?", err);
