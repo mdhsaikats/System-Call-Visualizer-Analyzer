@@ -60,6 +60,7 @@ if (logoutBtn) {
 // Unified and safe onSyscalls listener
 if (window.api && typeof window.api.onSyscalls === "function") {
   window.api.onSyscalls((data) => {
+    console.log("[onSyscalls] data received:", data);
     // Defensive: handle both number and object payloads
     let callsPerSec = 0;
     if (typeof data === "number") {
