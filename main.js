@@ -4,9 +4,40 @@ const { exec, spawn } = require("child_process");
 const readline = require("readline");
 const os = require("os");
 
+const createWindow = () => {
+  win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    icon: path.join(__dirname, "assets/icon.png"),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+
+  win.loadFile("renderer/index.html");
+  win.maximize();
+};
+
+app.whenReady().then(() => {
+  createWindow();
+  startSysCallMonitor();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+
 let win;
 
-// tanvir start
+// ======= Performance Code ========
 // Performance data collection utilities
 const perfCollector = {
   previousCpuUsage: null,
@@ -429,7 +460,6 @@ function buildFlameGraphData(functions) {
 
   return result;
 }
-// tanvir finish
 
 // Syscall latency distribution data
 let latencyHistory = [];
@@ -443,7 +473,6 @@ let latencyBuckets = {
   mmap: [],
 };
 
-//tanvir s
 // Function to track syscall latencies
 function trackSyscallLatency(syscallName, latencyMs) {
   // Categorize syscalls into buckets
@@ -544,38 +573,6 @@ function generateSimulatedLatencies() {
     }
   }
 }
-// Tanvir f
-
-const createWindow = () => {
-  win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    icon: path.join(__dirname, "assets/icon.png"),
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-
-  win.loadFile("renderer/index.html");
-  win.maximize();
-};
-
-app.whenReady().then(() => {
-  createWindow();
-  startSysCallMonitor();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
 
 // ===== IPC Handlers for Performance Data =====
 ipcMain.handle("get-performance-data", async () => {
@@ -635,6 +632,10 @@ ipcMain.handle("get-stack-traces", async () => {
     return generateDefaultStackTraces();
   }
 });
+
+// ====== Performance Code End =====
+
+// ===== Dashboards Code =====
 
 // ===== State buffers for real-time trace =====
 let recentSyscallsBuffer = [];
@@ -834,6 +835,8 @@ function startSysCallMonitor() {
   }, 1000);
 }
 
+// ======== Dashboard Code End ==========
+
 // ===== Process Tree =====
 
 // Helper to calculate uptime string (HH:MM:SS) from elapsed seconds
@@ -937,3 +940,9 @@ async function getLinuxProcessData() {
 ipcMain.handle("get-process-tree", async () => {
   return await getLinuxProcessData();
 });
+
+// ========== Process Tree Code End =================
+
+/*----------------------------------------------------*/
+//System Calls code
+/*----------------------------------------------------*/
