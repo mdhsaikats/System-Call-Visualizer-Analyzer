@@ -946,3 +946,86 @@ ipcMain.handle("get-process-tree", async () => {
 /*----------------------------------------------------*/
 //System Calls code
 /*----------------------------------------------------*/
+
+// Simple simulated syscall generator and IPC controls
+let _simulatedSyscallInterval = null;
+const _exampleSyscalls = [
+  "read",
+  "write",
+  "open",
+  "close",
+  "futex",
+  "epoll_wait",
+  "mmap",
+  "fsync",
+  "connect",
+  "sendto",
+  "recvfrom",
+];
+
+function _randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function startSimulatedSyscallGenerator(intervalMs = 500) {
+  if (_simulatedSyscallInterval) return;
+
+  _simulatedSyscallInterval = setInterval(() => {
+    const syscall = _exampleSyscalls[_randomInt(0, _exampleSyscalls.length - 1)];
+    const pid = _randomInt(1000, 65000).toString();
+    const procNames = ["node", "bash", "sshd", "nginx", "python", "java"];
+    const processName = procNames[_randomInt(0, procNames.length - 1)];
+    const latency = Math.max(0.05, Math.random() * 8 + (syscall === "fsync" ? 2 : 0));
+
+    // populate recentSyscallsBuffer similarly to real trace
+    const now = new Date();
+    recentSyscallsBuffer.unshift({
+      time: now.toISOString().substr(11, 12),
+      pid: pid,
+      process: processName,
+      syscall: syscall,
+      args: "...",
+      returnVal: "0",
+      latency: latency.toFixed(3),
+      isError: Math.random() < 0.01,
+    });
+
+    // keep buffer bounded
+    if (recentSyscallsBuffer.length > 50) recentSyscallsBuffer.pop();
+
+    // track latency distribution
+    try {
+      trackSyscallLatency(syscall, latency);
+    } catch (e) {
+      // ignore if trackSyscallLatency isn't available for some reason
+    }
+
+    // also send an IPC update to renderer if available
+    if (win && win.webContents) {
+      win.webContents.send("syscalls-simulated", {
+        recentSyscalls: [...recentSyscallsBuffer].slice(0, 5),
+      });
+    }
+  }, intervalMs);
+}
+
+function stopSimulatedSyscallGenerator() {
+  if (!_simulatedSyscallInterval) return;
+  clearInterval(_simulatedSyscallInterval);
+  _simulatedSyscallInterval = null;
+}
+
+// IPC controls for simulator and retrieval
+ipcMain.handle("start-simulated-syscalls", async (evt, intervalMs) => {
+  startSimulatedSyscallGenerator(intervalMs || 500);
+  return { started: true };
+});
+
+ipcMain.handle("stop-simulated-syscalls", async () => {
+  stopSimulatedSyscallGenerator();
+  return { stopped: true };
+});
+
+ipcMain.handle("get-recent-syscalls", async () => {
+  return recentSyscallsBuffer.slice(0, 50);
+});

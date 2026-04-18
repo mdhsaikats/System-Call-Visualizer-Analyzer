@@ -232,6 +232,7 @@
           <!-- Action Controls -->
           <div class="flex items-center gap-2">
             <button
+              id="pauseTraceBtn"
               class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white text-black text-xs font-semibold hover:bg-zinc-200 transition-colors shadow-sm"
             >
               <i data-lucide="pause" class="w-3.5 h-3.5 fill-current"></i> Pause
@@ -246,6 +247,18 @@
               class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-900 text-zinc-300 border border-white/10 text-xs font-medium hover:bg-zinc-800 transition-colors"
             >
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Export .pcap
+            </button>
+            <button
+              id="startSimBtn"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500 transition-colors"
+            >
+              <i data-lucide="play" class="w-3.5 h-3.5"></i> Start Sim
+            </button>
+            <button
+              id="stopSimBtn"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-500 transition-colors"
+            >
+              <i data-lucide="stop" class="w-3.5 h-3.5"></i> Stop Sim
             </button>
           </div>
         </div>
