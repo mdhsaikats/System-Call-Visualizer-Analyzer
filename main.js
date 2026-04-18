@@ -836,101 +836,104 @@ function startSysCallMonitor() {
 
 // ===== Process Tree =====
 
+// Helper to calculate uptime string (HH:MM:SS) from elapsed seconds
+function formatUptime(seconds) {
+  const h = Math.floor(seconds / 3600)
+    .toString()
+    .padStart(2, "0");
+  const m = Math.floor((seconds % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+// Helper to build the nested tree from a flat list
 function buildProcessTree(processes) {
   const map = {};
   const roots = [];
 
-  // Index all processes by PID
   processes.forEach((p) => (map[p.pid] = { ...p, children: [] }));
 
-  // Link children to parents
   processes.forEach((p) => {
     if (map[p.ppid] && p.ppid !== p.pid) {
       map[p.ppid].children.push(map[p.pid]);
     } else {
-      roots.push(map[p.pid]); // No parent found → treat as root
+      roots.push(map[p.pid]);
     }
   });
 
   return roots;
 }
 
-async function getProcessTree() {
+async function getLinuxProcessData() {
   return new Promise((resolve) => {
-    // Added 'user' to the start, 'comm' at the end to safely capture spaces in names
-    exec(
-      "ps -eo user,pid,ppid,%cpu,%mem,stat,comm --sort=pid --no-headers",
-      (err, stdout) => {
-        if (err) {
-          resolve({ tree: [], flat: [], stats: {} });
-          return;
-        }
+    // Linux ps command grabbing: PID, PPID, USER, GROUP, NICE, THREADS, ELAPSED SECONDS, CPU%, MEM%, STAT, COMMAND_NAME, FULL_ARGS
+    const cmd =
+      "ps -eo pid,ppid,user,group,ni,nlwp,etimes,%cpu,%mem,stat,comm,args --no-headers";
 
-        try {
-          const processes = [];
-          const stats = {
-            total: 0,
-            running: 0,
-            sleeping: 0,
-            waiting: 0,
-            zombie: 0,
-            stopped: 0,
-          };
+    exec(cmd, { maxBuffer: 1024 * 1024 * 10 }, (err, stdout) => {
+      if (err) {
+        resolve({ tree: [], flat: [], stats: {} });
+        return;
+      }
 
-          stdout
-            .trim()
-            .split("\n")
-            .forEach((line) => {
-              // Regex strictly separates the first 6 columns and groups the rest as the command name
-              const match = line
-                .trim()
-                .match(
-                  /^(\S+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+(\S+)\s+(.*)$/,
-                );
-              if (!match) return;
+      try {
+        const processes = [];
+        const stats = { total: 0, threads: 0, running: 0, sleeping: 0 };
 
-              const p = {
-                user: match[1],
-                pid: parseInt(match[2]),
-                ppid: parseInt(match[3]),
-                cpu: parseFloat(match[4]),
-                memory: parseFloat(match[5]),
-                state: match[6],
-                name: match[7],
-              };
+        stdout
+          .trim()
+          .split("\n")
+          .forEach((line) => {
+            // Robust regex to split the first 11 columns and group the rest into the full argument string
+            const match = line
+              .trim()
+              .match(
+                /^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(-?\d+)\s+(\d+)\s+(\d+)\s+([0-9.]+)\s+([0-9.]+)\s+(\S+)\s+(\S+)\s+(.*)$/,
+              );
+            if (!match) return;
 
-              processes.push(p);
+            const p = {
+              pid: parseInt(match[1]),
+              ppid: parseInt(match[2]),
+              user: match[3],
+              group: match[4],
+              nice: parseInt(match[5]),
+              threads: parseInt(match[6]),
+              uptime: formatUptime(parseInt(match[7])),
+              cpu: parseFloat(match[8]),
+              memory: parseFloat(match[9]),
+              state: match[10],
+              name: match[11],
+              args: match[12],
+            };
 
-              // Update Statistics
-              stats.total++;
-              const s = p.state.charAt(0).toUpperCase();
-              if (s === "R") stats.running++;
-              else if (s === "S") stats.sleeping++;
-              else if (s === "D") stats.waiting++;
-              else if (s === "Z") stats.zombie++;
-              else if (s === "T") stats.stopped++;
-            });
+            processes.push(p);
 
-          // Return exactly what the frontend is expecting
-          resolve({
-            tree: buildProcessTree(processes),
-            flat: processes,
-            stats: stats,
+            // Update overall stats
+            stats.total++;
+            stats.threads += p.threads;
+            if (p.state.startsWith("R")) stats.running++;
+            else if (p.state.startsWith("S")) stats.sleeping++;
           });
-        } catch (e) {
-          console.error("Parsing error:", e);
-          resolve({ tree: [], flat: [], stats: {} });
-        }
-      },
-    );
+
+        resolve({
+          tree: buildProcessTree(processes),
+          flat: processes,
+          stats: stats,
+        });
+      } catch (e) {
+        console.error("Failed to parse process data:", e);
+        resolve({ tree: [], flat: [], stats: {} });
+      }
+    });
   });
 }
 
+// Register the IPC handler
 ipcMain.handle("get-process-tree", async () => {
-  try {
-    return await getProcessTree();
-  } catch (err) {
-    console.error("Error getting process tree:", err);
-    return { tree: [], flat: [], stats: {} };
-  }
+  return await getLinuxProcessData();
 });

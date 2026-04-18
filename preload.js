@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld("api", {
   getStackTraces: async () => {
     return await ipcRenderer.invoke("get-stack-traces");
   },
+  getProcessTree: () => ipcRenderer.invoke("get-process-tree"),
 });

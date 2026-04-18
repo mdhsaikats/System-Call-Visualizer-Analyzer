@@ -1,7 +1,4 @@
-// Initialize Lucide Icons
-lucide.createIcons();
-
-class ProcessTree {
+class ProcessTreeApp {
   constructor() {
     this.flatList = [];
     this.treeData = [];
@@ -9,170 +6,161 @@ class ProcessTree {
     this.selectedPid = null;
     this.searchQuery = "";
     this.currentView = "tree"; // "tree" | "flat"
-    this.sortKey = "pid";
-    this.sortAsc = true;
-    this.updateInterval = 3000;
+
+    // Bind DOM Elements
+    this.elements = {
+      container: document.getElementById("processTreeBody"),
+      searchInput: document.querySelector('input[placeholder^="Find process"]'),
+      btnTree: document
+        .querySelector('button i[data-lucide="list-tree"]')
+        .closest("button"),
+      btnFlat: document
+        .querySelector('button i[data-lucide="list"]')
+        .closest("button"),
+      btnRefresh: document
+        .querySelector('button i[data-lucide="refresh-cw"]')
+        .closest("button"),
+      inspectorPanel: document.querySelector(".w-\\[380px\\]"), // Targets the right-side inspector
+      statsTotal: document.querySelector(
+        ".p-4.border-t .flex:nth-child(1) .font-mono",
+      ),
+      statsThreads: document.querySelector(
+        ".p-4.border-t .flex:nth-child(2) .font-mono",
+      ),
+    };
+
     this.init();
   }
 
   async init() {
-    this.bindControls();
-    await this.loadData();
-    this.startAutoRefresh();
+    lucide.createIcons();
+    this.bindEvents();
+    await this.fetchData();
+
+    // Auto-refresh every 3 seconds if not actively searching
+    setInterval(() => {
+      if (!this.searchQuery) this.fetchData();
+    }, 3000);
   }
 
-  // ─────────────────────────────────────────
-  // Data
-  // ─────────────────────────────────────────
-  startAutoRefresh() {
-    setInterval(async () => {
-      // Only refresh if we aren't heavily filtering to avoid jarring UX
-      if (!this.searchQuery) {
-        await this.loadData();
-      }
-    }, this.updateInterval);
+  bindEvents() {
+    // Search
+    if (this.elements.searchInput) {
+      this.elements.searchInput.addEventListener("input", (e) => {
+        this.searchQuery = e.target.value.toLowerCase().trim();
+        this.renderList();
+      });
+    }
+
+    // View Toggles
+    if (this.elements.btnTree) {
+      this.elements.btnTree.addEventListener("click", () => {
+        this.currentView = "tree";
+        this.updateViewButtons();
+        this.renderList();
+      });
+    }
+    if (this.elements.btnFlat) {
+      this.elements.btnFlat.addEventListener("click", () => {
+        this.currentView = "flat";
+        this.updateViewButtons();
+        this.renderList();
+      });
+    }
+
+    // Refresh
+    if (this.elements.btnRefresh) {
+      this.elements.btnRefresh.addEventListener("click", () =>
+        this.fetchData(),
+      );
+    }
   }
 
-  async loadData() {
+  updateViewButtons() {
+    const activeClasses = ["bg-zinc-800", "text-white", "shadow-sm"];
+    const inactiveClasses = ["text-zinc-500"];
+
+    if (this.currentView === "tree") {
+      this.elements.btnTree.classList.add(...activeClasses);
+      this.elements.btnTree.classList.remove(...inactiveClasses);
+      this.elements.btnFlat.classList.remove(...activeClasses);
+      this.elements.btnFlat.classList.add(...inactiveClasses);
+    } else {
+      this.elements.btnFlat.classList.add(...activeClasses);
+      this.elements.btnFlat.classList.remove(...inactiveClasses);
+      this.elements.btnTree.classList.remove(...activeClasses);
+      this.elements.btnTree.classList.add(...inactiveClasses);
+    }
+  }
+
+  async fetchData() {
     try {
-      // Make sure your preload.js exposes window.api.getProcessTree!
+      // Assumes preload.js exposes window.api.getProcessTree()
       const data = await window.api.getProcessTree();
       this.treeData = data.tree || [];
       this.flatList = data.flat || [];
-      this.updateStats(data.stats || {});
-      this.render();
+
+      // Update sidebar stats
+      if (this.elements.statsTotal)
+        this.elements.statsTotal.textContent =
+          data.stats.total.toLocaleString();
+      if (this.elements.statsThreads)
+        this.elements.statsThreads.textContent =
+          data.stats.threads.toLocaleString();
+
+      this.renderList();
     } catch (err) {
-      console.error("Error fetching process tree:", err);
+      console.error("Failed to load process data:", err);
     }
   }
 
-  // ─────────────────────────────────────────
-  // Stats bar (If you add these IDs to the sidebar)
-  // ─────────────────────────────────────────
-  updateStats(stats) {
-    const set = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val ?? "–";
-    };
-    set("st-total", stats.total);
-    set("st-running", stats.running);
-    // Add other IDs as needed...
-  }
+  renderList() {
+    if (!this.elements.container) return;
 
-  // ─────────────────────────────────────────
-  // Controls
-  // ─────────────────────────────────────────
-  bindControls() {
-    const searchInput = document.getElementById("pt-search");
-    if (searchInput) {
-      searchInput.addEventListener("input", (e) => {
-        this.searchQuery = e.target.value.toLowerCase().trim();
-        this.render();
-      });
-    }
-
-    document
-      .getElementById("btn-tree")
-      ?.addEventListener("click", () => this.setView("tree"));
-    document
-      .getElementById("btn-flat")
-      ?.addEventListener("click", () => this.setView("flat"));
-    document
-      .getElementById("btn-refresh")
-      ?.addEventListener("click", () => this.loadData());
-
-    document.querySelectorAll("[data-sort]").forEach((el) => {
-      el.addEventListener("click", () => this.sortBy(el.dataset.sort));
-    });
-  }
-
-  setView(view) {
-    this.currentView = view;
-    document
-      .getElementById("btn-tree")
-      ?.classList.toggle("bg-zinc-800", view === "tree");
-    document
-      .getElementById("btn-tree")
-      ?.classList.toggle("text-white", view === "tree");
-    document
-      .getElementById("btn-tree")
-      ?.classList.toggle("text-zinc-500", view !== "tree");
-
-    document
-      .getElementById("btn-flat")
-      ?.classList.toggle("bg-zinc-800", view === "flat");
-    document
-      .getElementById("btn-flat")
-      ?.classList.toggle("text-white", view === "flat");
-    document
-      .getElementById("btn-flat")
-      ?.classList.toggle("text-zinc-500", view !== "flat");
-    this.render();
-  }
-
-  sortBy(key) {
-    if (this.sortKey === key) {
-      this.sortAsc = !this.sortAsc;
-    } else {
-      this.sortKey = key;
-      this.sortAsc = true;
-    }
-    this.render();
-  }
-
-  // ─────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────
-  render() {
-    let rows;
+    let rowsToRender = [];
 
     if (this.currentView === "flat" || this.searchQuery) {
-      rows = [...this.flatList];
+      rowsToRender = [...this.flatList];
       if (this.searchQuery) {
-        rows = rows.filter(
+        rowsToRender = rowsToRender.filter(
           (p) =>
             p.name.toLowerCase().includes(this.searchQuery) ||
-            String(p.pid).includes(this.searchQuery) ||
-            (p.user || "").toLowerCase().includes(this.searchQuery),
+            String(p.pid).includes(this.searchQuery),
         );
       }
-      rows.sort((a, b) => {
-        const va = a[this.sortKey];
-        const vb = b[this.sortKey];
-        if (typeof va === "number") return this.sortAsc ? va - vb : vb - va;
-        return this.sortAsc
-          ? String(va).localeCompare(String(vb))
-          : String(vb).localeCompare(String(va));
-      });
     } else {
-      rows = this.walkTree(this.treeData);
+      rowsToRender = this.walkTree(this.treeData);
     }
 
-    const container = document.getElementById("proc-list");
-    if (!container) return;
+    // Build the exact HTML layout matching your design
+    this.elements.container.innerHTML = rowsToRender
+      .map((p) => this.generateRowHTML(p))
+      .join("");
 
-    container.innerHTML = rows.map((p) => this.renderRow(p)).join("");
-
-    container.querySelectorAll(".proc-row").forEach((el) => {
-      el.addEventListener("click", () => {
-        const pid = parseInt(el.dataset.pid);
-        const proc = this.flatList.find((p) => p.pid === pid);
-        this.selectProcess(proc, el);
-      });
-    });
-
-    container.querySelectorAll(".expand-toggle").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const pid = parseInt(el.dataset.pid);
-        if (this.collapsed.has(pid)) this.collapsed.delete(pid);
-        else this.collapsed.add(pid);
-        this.render();
-      });
-    });
-
-    // VERY IMPORTANT: Re-run lucide to render any generated icons in the new DOM
+    // Re-initialize icons in the newly created DOM elements
     lucide.createIcons();
+
+    // Attach row events
+    this.elements.container.querySelectorAll(".proc-row").forEach((row) => {
+      row.addEventListener("click", () => {
+        const pid = parseInt(row.dataset.pid);
+        const proc = this.flatList.find((p) => p.pid === pid);
+        this.selectProcess(proc, row);
+      });
+    });
+
+    // Attach expand/collapse events
+    this.elements.container
+      .querySelectorAll(".expand-toggle")
+      .forEach((toggle) => {
+        toggle.addEventListener("click", (e) => {
+          e.stopPropagation(); // Don't trigger row selection
+          const pid = parseInt(toggle.dataset.pid);
+          if (this.collapsed.has(pid)) this.collapsed.delete(pid);
+          else this.collapsed.add(pid);
+          this.renderList();
+        });
+      });
   }
 
   walkTree(nodes, depth = 0) {
@@ -190,169 +178,168 @@ class ProcessTree {
     return result;
   }
 
-  renderRow(p) {
+  generateRowHTML(p) {
     const isSelected = p.pid === this.selectedPid;
-    const isZombie = (p.state || "").startsWith("Z");
     const depth = p.depth || 0;
     const hasChildren =
-      this.currentView === "tree" && !this.searchQuery
-        ? p.children && p.children.length > 0
-        : false;
+      this.currentView === "tree" &&
+      !this.searchQuery &&
+      p.children &&
+      p.children.length > 0;
 
-    const stateInfo = this.stateStyle(p.state);
+    // Formatting logic
+    const stateColor = p.state.startsWith("R")
+      ? "#69f0ae"
+      : p.state.startsWith("S")
+        ? "#b39ddb"
+        : "#c8cdd8";
     const cpuColor =
       p.cpu > 50 ? "#ef5350" : p.cpu > 20 ? "#ffd54f" : "#69f0ae";
 
-    const toggleHtml = hasChildren
-      ? `<span class="expand-toggle" data-pid="${p.pid}" style="cursor:pointer; color:#4fc3f7; font-size:10px; user-select:none;">
-           ${this.collapsed.has(p.pid) ? "▶" : "▼"}
-         </span>`
-      : `<span style="color:#1f2430">·</span>`;
-
+    // Indentation and toggles
     let indentHtml = "";
     if (this.currentView === "tree" && !this.searchQuery) {
-      for (let i = 0; i < depth - 1; i++) {
-        indentHtml += `<span style="display:inline-block;width:14px;color:#1f2430;font-size:10px;text-align:center;">│</span>`;
-      }
-      if (depth > 0) {
-        indentHtml += `<span style="display:inline-block;width:14px;color:#1f2430;font-size:10px;text-align:center;">└</span>`;
+      for (let i = 0; i < depth; i++) {
+        indentHtml += `<span style="display:inline-block; width:16px;"></span>`;
       }
     }
 
+    const toggleHtml = hasChildren
+      ? `<span class="expand-toggle cursor-pointer flex items-center justify-center w-4 h-4 hover:text-white" data-pid="${p.pid}">
+           <i data-lucide="${this.collapsed.has(p.pid) ? "chevron-right" : "chevron-down"}" class="w-3 h-3 text-[#4fc3f7]"></i>
+         </span>`
+      : `<span class="w-4 h-4 inline-block"></span>`;
+
+    // Highlight search matches
     let displayName = p.name;
     if (this.searchQuery && p.name.toLowerCase().includes(this.searchQuery)) {
-      const idx = p.name.toLowerCase().indexOf(this.searchQuery);
-      displayName =
-        p.name.slice(0, idx) +
-        `<span style="background:rgba(79,195,247,0.25);color:#4fc3f7;border-radius:2px;">${p.name.slice(idx, idx + this.searchQuery.length)}</span>` +
-        p.name.slice(idx + this.searchQuery.length);
+      const regex = new RegExp(`(${this.searchQuery})`, "gi");
+      displayName = p.name.replace(
+        regex,
+        `<span class="bg-[#4fc3f7]/20 text-[#4fc3f7] rounded px-0.5">$1</span>`,
+      );
     }
 
-    const nameColor =
-      p.pid <= 2 ? "#4fc3f7" : p.user === "root" ? "#b39ddb" : "#c8cdd8";
-    const cpuBarW = Math.min(p.cpu, 100).toFixed(1);
-
+    // Returning the exact <div> structure requested in your design
     return `
-      <tr class="proc-row hover:bg-zinc-800/40 transition-colors border-b border-white/[0.02] cursor-pointer
-                 ${isSelected ? "bg-zinc-800/60" : ""}
-                 ${isZombie ? "opacity-50" : ""}"
-          data-pid="${p.pid}">
-        <td class="px-3 py-2 text-center w-6">${toggleHtml}</td>
-        <td class="px-3 py-2 font-mono text-[11px] text-zinc-500 w-16">${p.pid}</td>
-        <td class="px-3 py-2 max-w-[220px]">
-          <div class="flex items-center overflow-hidden">
-            ${indentHtml}
-            <span class="font-mono text-[11px] truncate" style="color:${nameColor}">${displayName}</span>
-          </div>
-        </td>
-        <td class="px-3 py-2 w-28">
-          <div class="flex items-center gap-1">
-            <div class="flex-1 h-[3px] bg-zinc-700 rounded overflow-hidden">
-              <div class="h-full rounded transition-all duration-300" style="width:${cpuBarW}%; background:${cpuColor};"></div>
-            </div>
-            <span class="font-mono text-[10px] w-8 text-right" style="color:${cpuColor}">${p.cpu.toFixed(1)}</span>
-          </div>
-        </td>
-        <td class="px-3 py-2 font-mono text-[11px] text-purple-300 w-16">${p.memory.toFixed(1)}%</td>
-        <td class="px-3 py-2 w-20">
-          <span class="font-mono text-[10px] font-semibold px-[5px] py-[1px] rounded" style="background:${stateInfo.bg}; color:${stateInfo.fg};">${stateInfo.label}</span>
-        </td>
-        <td class="px-3 py-2 font-mono text-[11px] text-zinc-500">${p.user || "?"}</td>
-      </tr>`;
+      <div class="proc-row flex items-center px-4 py-2 text-xs border-b border-white/[0.02] cursor-pointer transition-colors hover:bg-zinc-800/40 ${isSelected ? "bg-zinc-800/60" : ""}" data-pid="${p.pid}">
+        <div class="w-[45%] pl-2 flex items-center gap-2 overflow-hidden truncate">
+          ${indentHtml}
+          ${toggleHtml}
+          <i data-lucide="terminal" class="w-3.5 h-3.5 text-zinc-500 shrink-0"></i>
+          <span class="text-zinc-200 font-mono truncate" title="${p.name}">${displayName}</span>
+        </div>
+        <div class="w-[15%] text-right pr-4 font-mono text-zinc-500">${p.pid}</div>
+        <div class="w-[10%] text-right pr-4 font-mono text-zinc-400">${p.user}</div>
+        <div class="w-[10%] text-right pr-4 font-mono" style="color:${cpuColor}">${p.cpu.toFixed(1)}</div>
+        <div class="w-[10%] text-right pr-4 font-mono text-purple-300">${p.memory.toFixed(1)}</div>
+        <div class="w-[10%] text-right font-mono" style="color:${stateColor}">${p.state}</div>
+      </div>
+    `;
   }
 
-  stateStyle(state) {
-    const s = (state || "?")[0].toUpperCase();
-    const map = {
-      R: { label: "RUN", bg: "rgba(105,240,174,0.15)", fg: "#69f0ae" },
-      S: { label: "SLEEP", bg: "rgba(179,157,219,0.15)", fg: "#b39ddb" },
-      D: { label: "WAIT", bg: "rgba(255,213,79,0.15)", fg: "#ffd54f" },
-      Z: { label: "ZOMBIE", bg: "rgba(239,83,80,0.2)", fg: "#ef5350" },
-      T: { label: "STOP", bg: "rgba(255,138,101,0.15)", fg: "#ff8a65" },
-      I: { label: "IDLE", bg: "rgba(74,81,104,0.3)", fg: "#4a5168" },
-    };
-    return (
-      map[s] || {
-        label: state || "?",
-        bg: "rgba(74,81,104,0.2)",
-        fg: "#4a5168",
-      }
-    );
-  }
-
-  selectProcess(proc, el) {
+  selectProcess(proc, rowElement) {
     this.selectedPid = proc ? proc.pid : null;
+
+    // Highlight styling
     document
       .querySelectorAll(".proc-row")
       .forEach((r) => r.classList.remove("bg-zinc-800/60"));
-    if (el) el.classList.add("bg-zinc-800/60");
+    if (rowElement) rowElement.classList.add("bg-zinc-800/60");
 
-    const sidebar = document.getElementById("pt-sidebar-content");
-    if (!sidebar) return;
+    if (!this.elements.inspectorPanel) return;
 
     if (!proc) {
-      sidebar.innerHTML = `<p class="text-zinc-600 font-mono text-[11px] text-center mt-10">Select a process<br>to see details</p>`;
+      this.elements.inspectorPanel.innerHTML = `
+        <div class="flex-1 overflow-y-auto p-5 flex items-center justify-center h-full">
+          <p class="text-zinc-600 font-mono text-[11px] text-center mt-10">Select a process<br>to see details</p>
+        </div>`;
       return;
     }
 
-    const children = this.flatList.filter(
-      (p) => p.ppid === proc.pid && p.pid !== proc.pid,
-    );
-    const stateInfo = this.stateStyle(proc.state);
+    // Determine state labels
+    let stateLabel = "Running";
+    if (proc.state.startsWith("S")) stateLabel = "Sleeping";
+    else if (proc.state.startsWith("Z")) stateLabel = "Zombie";
+    else if (proc.state.startsWith("T")) stateLabel = "Stopped";
 
-    sidebar.innerHTML = `
-      <div class="mb-4">
-        <p class="font-mono text-[10px] text-[#4fc3f7] uppercase tracking-widest mb-2 pb-1 border-b border-zinc-800">Identity</p>
-        ${this.detailRow("Name", proc.name)}
-        ${this.detailRow("PID", proc.pid)}
-        ${this.detailRow("PPID", proc.ppid)}
-        ${this.detailRow("User", proc.user || "?")}
-      </div>
-      <div class="mb-4">
-        <p class="font-mono text-[10px] text-[#4fc3f7] uppercase tracking-widest mb-2 pb-1 border-b border-zinc-800">Status</p>
-        <div class="flex justify-between mb-1">
-          <span class="font-mono text-[10px] text-zinc-500">State</span>
-          <span class="font-mono text-[10px] font-semibold px-[5px] py-[1px] rounded" style="background:${stateInfo.bg}; color:${stateInfo.fg};">
-            ${stateInfo.label} (${proc.state})
-          </span>
+    // Rebuild the entire inspector panel with dynamic data
+    this.elements.inspectorPanel.innerHTML = `
+      <div class="p-5 border-b border-white/[0.04] bg-zinc-900/30">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <h2 class="text-base font-bold text-white tracking-tight truncate max-w-[200px]">${proc.name}</h2>
+              <span class="bg-zinc-200 text-black px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shadow-sm">${stateLabel}</span>
+            </div>
+            <p class="text-xs font-mono text-zinc-500">
+              PID: <span class="text-zinc-300">${proc.pid}</span> • PPID: <span class="text-zinc-400 hover:text-white cursor-pointer transition-colors">${proc.ppid}</span>
+            </p>
+          </div>
         </div>
-        ${this.detailRow("CPU%", proc.cpu.toFixed(2) + "%", "#69f0ae")}
-        ${this.detailRow("MEM%", proc.memory.toFixed(2) + "%", "#b39ddb")}
-        ${this.detailRow("Depth", proc.depth ?? 0)}
+        <div class="flex items-center gap-2">
+          <button class="flex-1 flex justify-center items-center gap-1.5 px-3 py-1.5 rounded bg-zinc-800 text-white text-xs font-medium hover:bg-zinc-700 transition-colors border border-white/5 shadow-sm">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Trace
+          </button>
+          <button class="flex-none px-3 py-1.5 rounded bg-[#ef5350]/10 text-[#ef5350] border border-[#ef5350]/20 text-xs font-bold hover:bg-[#ef5350]/20 transition-colors">
+            Kill
+          </button>
+        </div>
       </div>
-      ${
-        children.length > 0
-          ? `
-      <div class="mb-4">
-        <p class="font-mono text-[10px] text-[#4fc3f7] uppercase tracking-widest mb-2 pb-1 border-b border-zinc-800">Children (${children.length})</p>
-        ${children
-          .slice(0, 8)
-          .map(
-            (c) => `
-          <div class="flex justify-between py-1 border-b border-zinc-800/60">
-            <span class="font-mono text-[10px] text-zinc-300 truncate max-w-[130px]">${c.name}</span>
-            <span class="font-mono text-[10px] text-zinc-600">${c.pid}</span>
-          </div>`,
-          )
-          .join("")}
-        ${children.length > 8 ? `<p class="font-mono text-[10px] text-zinc-600 mt-1">+${children.length - 8} more</p>` : ""}
-      </div>`
-          : ""
-      }
+
+      <div class="flex px-2 pt-2 border-b border-white/[0.04] bg-zinc-900/50">
+        <button class="px-4 py-2 text-xs font-medium text-white border-b-2 border-white">Overview</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-5 space-y-6">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-zinc-900/50 border border-white/[0.04] rounded-lg p-3">
+            <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">CPU Usage</span>
+            <div class="mt-1 flex items-end gap-2">
+              <span class="text-xl font-bold text-white tracking-tight">${proc.cpu.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div class="bg-zinc-900/50 border border-white/[0.04] rounded-lg p-3">
+            <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">Memory</span>
+            <div class="mt-1 flex items-end gap-2">
+              <span class="text-xl font-bold text-white tracking-tight">${proc.memory.toFixed(1)}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-3">Process Details</h3>
+          <div class="space-y-3 font-mono text-xs">
+            <div class="flex justify-between border-b border-white/[0.02] pb-2">
+              <span class="text-zinc-500">User</span><span class="text-zinc-200">${proc.user}</span>
+            </div>
+            <div class="flex justify-between border-b border-white/[0.02] pb-2">
+              <span class="text-zinc-500">Group</span><span class="text-zinc-200">${proc.group}</span>
+            </div>
+            <div class="flex justify-between border-b border-white/[0.02] pb-2">
+              <span class="text-zinc-500">Priority (Nice)</span><span class="text-zinc-200">${proc.nice}</span>
+            </div>
+            <div class="flex justify-between border-b border-white/[0.02] pb-2">
+              <span class="text-zinc-500">Threads</span><span class="text-zinc-200">${proc.threads}</span>
+            </div>
+            <div class="flex justify-between border-b border-white/[0.02] pb-2">
+              <span class="text-zinc-500">Uptime</span><span class="text-zinc-200">${proc.uptime}</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">Command Line</h3>
+          <div class="bg-zinc-950/50 rounded-lg border border-white/[0.05] p-3 font-mono text-[11px] text-zinc-300 break-all leading-relaxed shadow-inner">
+            ${proc.args}
+          </div>
+        </div>
+      </div>
     `;
     lucide.createIcons();
-  }
-
-  detailRow(key, val, color = null) {
-    const valStyle = color ? `style="color:${color}"` : "";
-    return `
-      <div class="flex justify-between mb-1">
-        <span class="font-mono text-[10px] text-zinc-500">${key}</span>
-        <span class="font-mono text-[10px] text-zinc-300 truncate max-w-[140px] text-right" ${valStyle}>${val}</span>
-      </div>`;
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  new ProcessTree();
+  new ProcessTreeApp();
 });
