@@ -11,7 +11,7 @@ let win;
 const perfCollector = {
   previousCpuUsage: null,
   previousNetStats: null,
-  
+
   getCpuUsage: async () => {
     return new Promise((resolve) => {
       // macOS: Get CPU usage from top command
@@ -157,7 +157,10 @@ const perfCollector = {
             return;
           }
           // Simulated based on typical workload
-          resolve({ read: 95 + Math.random() * 30, write: 70 + Math.random() * 25 });
+          resolve({
+            read: 95 + Math.random() * 30,
+            write: 70 + Math.random() * 25,
+          });
         });
       } else {
         // Linux: Use iostat if available
@@ -166,7 +169,10 @@ const perfCollector = {
             resolve({ read: 85, write: 60 });
             return;
           }
-          resolve({ read: 92 + Math.random() * 28, write: 65 + Math.random() * 30 });
+          resolve({
+            read: 92 + Math.random() * 28,
+            write: 65 + Math.random() * 30,
+          });
         });
       }
     });
@@ -204,68 +210,59 @@ const perfCollector = {
   getTopCPUProcesses: async () => {
     return new Promise((resolve) => {
       if (process.platform === "darwin") {
-        exec(
-          "ps -eo pid,comm,%cpu,%mem -r | head -n 6",
-          (err, stdout) => {
-            if (err) {
-              resolve([]);
-              return;
-            }
-            try {
-              const lines = stdout
-                .trim()
-                .split("\n")
-                .slice(1);
-              const processes = lines
-                .map((line) => {
-                  const parts = line.trim().split(/\s+/);
-                  if (parts.length >= 4) {
-                    return {
-                      pid: parts[0],
-                      name: parts[1],
-                      cpu: parseFloat(parts[2]),
-                      memory: parseFloat(parts[3]),
-                    };
-                  }
-                  return null;
-                })
-                .filter((p) => p !== null);
-              resolve(processes.slice(0, 10));
-            } catch (e) {
-              resolve([]);
-            }
+        exec("ps -eo pid,comm,%cpu,%mem -r | head -n 6", (err, stdout) => {
+          if (err) {
+            resolve([]);
+            return;
           }
-        );
+          try {
+            const lines = stdout.trim().split("\n").slice(1);
+            const processes = lines
+              .map((line) => {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 4) {
+                  return {
+                    pid: parts[0],
+                    name: parts[1],
+                    cpu: parseFloat(parts[2]),
+                    memory: parseFloat(parts[3]),
+                  };
+                }
+                return null;
+              })
+              .filter((p) => p !== null);
+            resolve(processes.slice(0, 10));
+          } catch (e) {
+            resolve([]);
+          }
+        });
       } else {
-        exec(
-          "ps aux --sort=-%cpu | head -n 11 | tail -n 10",
-          (err, stdout) => {
-            if (err) {
-              resolve([]);
-              return;
-            }
-            try {
-              const lines = stdout.trim().split("\n");
-              const processes = lines
-                .map((line) => {
-                  const parts = line.trim().split(/\s+/);
-                  if (parts.length >= 11) {
-                    return {
-                      pid: parts[1],
-                      name: parts[10],
-                      cpu: parseFloat(parts[2]),
-                      memory: parseFloat(parts[3]),
-                    };
-                  }
-                  return null;
-                })
-                .filter((p) => p !== null);
-              resolve(processes);
-            } catch (e) {
-              resolve([]);
-            }
+        exec("ps aux --sort=-%cpu | head -n 11 | tail -n 10", (err, stdout) => {
+          if (err) {
+            resolve([]);
+            return;
           }
-        );
+          try {
+            const lines = stdout.trim().split("\n");
+            const processes = lines
+              .map((line) => {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 11) {
+                  return {
+                    pid: parts[1],
+                    name: parts[10],
+                    cpu: parseFloat(parts[2]),
+                    memory: parseFloat(parts[3]),
+                  };
+                }
+                return null;
+              })
+              .filter((p) => p !== null);
+            resolve(processes);
+          } catch (e) {
+            resolve([]);
+          }
+        });
       }
     });
   },
@@ -274,7 +271,8 @@ const perfCollector = {
     return new Promise((resolve) => {
       if (process.platform === "darwin") {
         // macOS: Use sample command to get stack traces
-        exec("sample -n 1000 -o /tmp/sample.txt 2>/dev/null; cat /tmp/sample.txt", 
+        exec(
+          "sample -n 1000 -o /tmp/sample.txt 2>/dev/null; cat /tmp/sample.txt",
           { maxBuffer: 10 * 1024 * 1024 },
           (err, stdout) => {
             if (err) {
@@ -288,11 +286,12 @@ const perfCollector = {
             } catch (e) {
               resolve(generateDefaultStackTraces());
             }
-          }
+          },
         );
       } else {
         // Linux: Use perf if available
-        exec("perf record -F 100 -p $$ -- sleep 1 2>/dev/null && perf report --stdio 2>/dev/null | head -n 50",
+        exec(
+          "perf record -F 100 -p $$ -- sleep 1 2>/dev/null && perf report --stdio 2>/dev/null | head -n 50",
           { maxBuffer: 10 * 1024 * 1024 },
           (err, stdout) => {
             if (err) {
@@ -306,26 +305,25 @@ const perfCollector = {
             } catch (e) {
               resolve(generateDefaultStackTraces());
             }
-          }
+          },
         );
       }
     });
   },
 };
 
-
 // Helper functions for stack trace parsing
 function parseStackTraces(output) {
   const stacks = {};
   const lines = output.split("\n");
-  
+
   for (const line of lines) {
     // Match common kernel/system function names
     const match = line.match(/\s+([a-zA-Z0-9_]+)\s+\[.*\]\s*([\d.]+)%/);
     if (match) {
       const func = match[1];
       const percent = parseFloat(match[2]) || 0;
-      
+
       if (!stacks[func]) {
         stacks[func] = percent;
       } else {
@@ -333,7 +331,7 @@ function parseStackTraces(output) {
       }
     }
   }
-  
+
   // Convert to structured format
   const stackArray = Object.entries(stacks)
     .map(([name, percent]) => ({ name, percent }))
@@ -362,7 +360,7 @@ function generateDefaultStackTraces() {
 
 function buildFlameGraphData(functions) {
   const totalPercent = functions.reduce((sum, f) => sum + f.percent, 0);
-  
+
   // Root level
   const result = {
     root: {
@@ -445,13 +443,12 @@ let latencyBuckets = {
   mmap: [],
 };
 
-
 //tanvir s
 // Function to track syscall latencies
 function trackSyscallLatency(syscallName, latencyMs) {
   // Categorize syscalls into buckets
   let category = "other";
-  
+
   if (syscallName.includes("epoll")) category = "epoll";
   else if (syscallName.includes("read")) category = "read";
   else if (syscallName.includes("write")) category = "write";
@@ -459,10 +456,10 @@ function trackSyscallLatency(syscallName, latencyMs) {
   else if (syscallName.includes("open")) category = "open";
   else if (syscallName.includes("fsync")) category = "fsync";
   else if (syscallName.includes("mmap")) category = "mmap";
-  
+
   if (latencyBuckets[category]) {
     latencyBuckets[category].push(latencyMs);
-    
+
     // Keep only last 1000 samples per bucket to avoid memory issues
     if (latencyBuckets[category].length > 1000) {
       latencyBuckets[category].shift();
@@ -481,7 +478,7 @@ function calculatePercentile(data, percentile) {
 // Function to get syscall latency distribution
 function getSyscallLatencyDistribution() {
   const distribution = {};
-  
+
   // Check if we have any real data
   let hasRealData = false;
   for (const latencies of Object.values(latencyBuckets)) {
@@ -490,12 +487,12 @@ function getSyscallLatencyDistribution() {
       break;
     }
   }
-  
+
   // If no real data, populate with simulated data for display
   if (!hasRealData) {
     generateSimulatedLatencies();
   }
-  
+
   for (const [syscall, latencies] of Object.entries(latencyBuckets)) {
     if (latencies.length > 0) {
       distribution[syscall] = {
@@ -519,7 +516,7 @@ function getSyscallLatencyDistribution() {
       };
     }
   }
-  
+
   return distribution;
 }
 
@@ -534,12 +531,13 @@ function generateSimulatedLatencies() {
     fsync: { base: 3.0, variance: 2.0, count: 50 },
     mmap: { base: 1.3, variance: 0.9, count: 120 },
   };
-  
+
   for (const [syscall, data] of Object.entries(simulatedData)) {
     if (latencyBuckets[syscall].length === 0) {
       for (let i = 0; i < data.count; i++) {
         // Generate latencies with normal-ish distribution
-        const randomVariance = (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
+        const randomVariance =
+          (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
         const latency = data.base + randomVariance * data.variance;
         latencyBuckets[syscall].push(Math.max(0.1, latency)); // Ensure positive values
       }
@@ -835,3 +833,104 @@ function startSysCallMonitor() {
     });
   }, 1000);
 }
+
+// ===== Process Tree =====
+
+function buildProcessTree(processes) {
+  const map = {};
+  const roots = [];
+
+  // Index all processes by PID
+  processes.forEach((p) => (map[p.pid] = { ...p, children: [] }));
+
+  // Link children to parents
+  processes.forEach((p) => {
+    if (map[p.ppid] && p.ppid !== p.pid) {
+      map[p.ppid].children.push(map[p.pid]);
+    } else {
+      roots.push(map[p.pid]); // No parent found → treat as root
+    }
+  });
+
+  return roots;
+}
+
+async function getProcessTree() {
+  return new Promise((resolve) => {
+    // Added 'user' to the start, 'comm' at the end to safely capture spaces in names
+    exec(
+      "ps -eo user,pid,ppid,%cpu,%mem,stat,comm --sort=pid --no-headers",
+      (err, stdout) => {
+        if (err) {
+          resolve({ tree: [], flat: [], stats: {} });
+          return;
+        }
+
+        try {
+          const processes = [];
+          const stats = {
+            total: 0,
+            running: 0,
+            sleeping: 0,
+            waiting: 0,
+            zombie: 0,
+            stopped: 0,
+          };
+
+          stdout
+            .trim()
+            .split("\n")
+            .forEach((line) => {
+              // Regex strictly separates the first 6 columns and groups the rest as the command name
+              const match = line
+                .trim()
+                .match(
+                  /^(\S+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+(\S+)\s+(.*)$/,
+                );
+              if (!match) return;
+
+              const p = {
+                user: match[1],
+                pid: parseInt(match[2]),
+                ppid: parseInt(match[3]),
+                cpu: parseFloat(match[4]),
+                memory: parseFloat(match[5]),
+                state: match[6],
+                name: match[7],
+              };
+
+              processes.push(p);
+
+              // Update Statistics
+              stats.total++;
+              const s = p.state.charAt(0).toUpperCase();
+              if (s === "R") stats.running++;
+              else if (s === "S") stats.sleeping++;
+              else if (s === "D") stats.waiting++;
+              else if (s === "Z") stats.zombie++;
+              else if (s === "T") stats.stopped++;
+            });
+
+          // Return exactly what the frontend is expecting
+          resolve({
+            tree: buildProcessTree(processes),
+            flat: processes,
+            stats: stats,
+          });
+        } catch (e) {
+          console.error("Parsing error:", e);
+          resolve({ tree: [], flat: [], stats: {} });
+        }
+      },
+    );
+  });
+}
+
+ipcMain.handle("get-process-tree", async () => {
+  try {
+    return await getProcessTree();
+  } catch (err) {
+    console.error("Error getting process tree:", err);
+    return { tree: [], flat: [], stats: {} };
+  }
+});
