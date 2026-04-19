@@ -36,6 +36,7 @@ app.on("window-all-closed", () => {
 });
 
 let win;
+let straceProcess = null;
 
 // ======= Performance Code ========
 // Performance data collection utilities
@@ -947,85 +948,134 @@ ipcMain.handle("get-process-tree", async () => {
 //System Calls code
 /*----------------------------------------------------*/
 
-// Simple simulated syscall generator and IPC controls
-let _simulatedSyscallInterval = null;
-const _exampleSyscalls = [
-  "read",
-  "write",
-  "open",
-  "close",
-  "futex",
-  "epoll_wait",
-  "mmap",
-  "fsync",
-  "connect",
-  "sendto",
-  "recvfrom",
-];
+ipcMain.on('start-trace', (event, targetPid) => {
+  if (straceProcess) {
+    event.reply('trace-error', 'Trace already in progress');
+    return; // Already tracing
+  }
 
-function _randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function startSimulatedSyscallGenerator(intervalMs = 500) {
-  if (_simulatedSyscallInterval) return;
-
-  _simulatedSyscallInterval = setInterval(() => {
-    const syscall = _exampleSyscalls[_randomInt(0, _exampleSyscalls.length - 1)];
-    const pid = _randomInt(1000, 65000).toString();
-    const procNames = ["node", "bash", "sshd", "nginx", "python", "java"];
-    const processName = procNames[_randomInt(0, procNames.length - 1)];
-    const latency = Math.max(0.05, Math.random() * 8 + (syscall === "fsync" ? 2 : 0));
-
-    // populate recentSyscallsBuffer similarly to real trace
-    const now = new Date();
-    recentSyscallsBuffer.unshift({
-      time: now.toISOString().substr(11, 12),
-      pid: pid,
-      process: processName,
-      syscall: syscall,
-      args: "...",
-      returnVal: "0",
-      latency: latency.toFixed(3),
-      isError: Math.random() < 0.01,
+  // If no PID is provided, trace the current Electron main process
+  const pidToTrace = targetPid || process.pid;
+  
+  // strace flags: 
+  // -f : follow child processes
+  // -tt : microsecond timestamps
+  // -T : time spent in syscall
+  // -p : attach to PID
+  // -e trace=all : trace all syscalls
+  try {
+    straceProcess = spawn('strace', ['-f', '-tt', '-T', '-p', pidToTrace], {
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
-    // keep buffer bounded
-    if (recentSyscallsBuffer.length > 50) recentSyscallsBuffer.pop();
+    straceProcess.on('error', (err) => {
+      console.error('Failed to spawn strace:', err.message);
+      event.reply('trace-error', `Failed to start strace: ${err.message}`);
+      straceProcess = null;
+    });
 
-    // track latency distribution
-    try {
-      trackSyscallLatency(syscall, latency);
-    } catch (e) {
-      // ignore if trackSyscallLatency isn't available for some reason
-    }
+    // strace outputs to stderr, not stdout
+    straceProcess.stderr.on('data', (data) => {
+      const lines = data.toString().split('\n');
+      
+      lines.forEach(line => {
+        if (!line.trim()) return;
 
-    // also send an IPC update to renderer if available
-    if (win && win.webContents) {
-      win.webContents.send("syscalls-simulated", {
-        recentSyscalls: [...recentSyscallsBuffer].slice(0, 5),
+        // Skip non-syscall lines (signals, unfinished, resumed, etc.)
+        if (line.includes('+++') || line.includes('---') || line.includes('resumed') || line.includes('unfinished')) {
+          return;
+        }
+
+        // Regex patterns to handle various strace formats:
+        // Standard: timestamp syscall(args) = return <time>
+        // Signal: timestamp --- SIGNAL (details) ---
+        // Example: 14:22:01.045892 futex(0x7f8a9c0b29d0, FUTEX_WAIT_PRIVATE, 0, NULL) = -11 EAGAIN <0.001240>
+        const match = line.match(
+          /^(\d{2}:\d{2}:\d{2}\.\d+)\s+([a-zA-Z0-9_]+)\((.*?)\)\s+=\s+(.*?)(?:\s+<([0-9.]+)>)?$/
+        );
+        
+        if (match) {
+          try {
+            const latencyStr = match[5];
+            let latencyMs = 'N/A';
+            
+            if (latencyStr) {
+              const latency = parseFloat(latencyStr);
+              // strace outputs latency in seconds, convert to milliseconds
+              latencyMs = (latency * 1000).toFixed(3);
+            }
+
+            const syscallData = {
+              timestamp: match[1],
+              cpu: 'CPU0', // strace doesn't easily provide CPU core without perf
+              pid: String(pidToTrace),
+              syscall: match[2],
+              args: match[3].length > 100 ? match[3].substring(0, 97) + '...' : match[3],
+              returnValue: match[4].trim(),
+              latency: latencyMs,
+              isError: match[4].trim().startsWith('-')
+            };
+            
+            if (win && win.webContents && !win.isDestroyed()) {
+              win.webContents.send('syscall-data', syscallData);
+            }
+          } catch (parseErr) {
+            console.error('Error parsing syscall data:', parseErr);
+          }
+        }
       });
+    });
+
+    straceProcess.stderr.on('error', (err) => {
+      console.error('strace stderr error:', err);
+      event.reply('trace-error', `stderr error: ${err.message}`);
+    });
+
+    straceProcess.on('close', (code) => {
+      console.log(`strace process exited with code ${code}`);
+      straceProcess = null;
+      if (win && win.webContents && !win.isDestroyed()) {
+        win.webContents.send('trace-stopped', code);
+      }
+    });
+
+    event.reply('trace-started', `Tracing PID ${pidToTrace}`);
+  } catch (err) {
+    console.error('Error starting trace:', err);
+    event.reply('trace-error', `Error: ${err.message}`);
+    straceProcess = null;
+  }
+});
+
+ipcMain.on('stop-trace', (event) => {
+  if (straceProcess) {
+    try {
+      straceProcess.kill('SIGTERM');
+      // Fallback: force kill after 2 seconds
+      setTimeout(() => {
+        if (straceProcess) {
+          straceProcess.kill('SIGKILL');
+        }
+      }, 2000);
+      event.reply('trace-stopping', 'Stopping trace...');
+    } catch (err) {
+      console.error('Error stopping trace:', err);
+      event.reply('trace-error', `Error stopping trace: ${err.message}`);
+      straceProcess = null;
     }
-  }, intervalMs);
-}
-
-function stopSimulatedSyscallGenerator() {
-  if (!_simulatedSyscallInterval) return;
-  clearInterval(_simulatedSyscallInterval);
-  _simulatedSyscallInterval = null;
-}
-
-// IPC controls for simulator and retrieval
-ipcMain.handle("start-simulated-syscalls", async (evt, intervalMs) => {
-  startSimulatedSyscallGenerator(intervalMs || 500);
-  return { started: true };
+  } else {
+    event.reply('trace-error', 'No active trace');
+  }
 });
 
-ipcMain.handle("stop-simulated-syscalls", async () => {
-  stopSimulatedSyscallGenerator();
-  return { stopped: true };
-});
-
-ipcMain.handle("get-recent-syscalls", async () => {
-  return recentSyscallsBuffer.slice(0, 50);
+// Cleanup on app exit
+app.on('before-quit', () => {
+  if (straceProcess) {
+    try {
+      straceProcess.kill('SIGKILL');
+    } catch (err) {
+      console.error('Error killing strace on app exit:', err);
+    }
+    straceProcess = null;
+  }
 });
