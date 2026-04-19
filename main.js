@@ -42,7 +42,8 @@ let straceProcess = null;
 // Performance data collection utilities
 const perfCollector = {
   previousCpuUsage: null,
-  previousNetStats: null,
+  lastDiskStats: null,
+  lastNetStats: null,
 
   getCpuUsage: async () => {
     return new Promise((resolve) => {
@@ -181,60 +182,112 @@ const perfCollector = {
 
   getDiskIO: async () => {
     return new Promise((resolve) => {
+      const now = Date.now();
       if (process.platform === "darwin") {
-        // macOS: Get disk I/O stats
-        exec("diskutil info / | grep -i 'total space'", (err, stdout) => {
-          if (err) {
-            resolve({ read: 85, write: 60 });
-            return;
-          }
-          // Simulated based on typical workload
+        exec("iostat -c 2 -w 1 -d disk0 | tail -n 1", (err, stdout) => {
+          if (err) return resolve({ read: 0, write: 0 });
+          const parts = stdout.trim().split(/\s+/);
           resolve({
-            read: 95 + Math.random() * 30,
-            write: 70 + Math.random() * 25,
+            read: parseFloat(parts[0]) || 0,
+            write: parseFloat(parts[1]) || 0,
           });
         });
       } else {
-        // Linux: Use iostat if available
-        exec("iostat -x 1 2 | tail -n 1", (err, stdout) => {
-          if (err) {
-            resolve({ read: 85, write: 60 });
-            return;
-          }
-          resolve({
-            read: 92 + Math.random() * 28,
-            write: 65 + Math.random() * 30,
-          });
-        });
+        // Linux: Parse /proc/diskstats for real-time reads/writes
+        exec(
+          "cat /proc/diskstats | awk '{read+=$6; write+=$10} END {print read, write}'",
+          (err, stdout) => {
+            if (err) return resolve({ read: 0, write: 0 });
+
+            const parts = stdout.trim().split(/\s+/);
+            const currentReadSectors = parseInt(parts[0]) || 0;
+            const currentWriteSectors = parseInt(parts[1]) || 0;
+            // Sector size is typically 512 bytes
+            const currentReadBytes = currentReadSectors * 512;
+            const currentWriteBytes = currentWriteSectors * 512;
+
+            let readRate = 0,
+              writeRate = 0;
+
+            if (perfCollector.lastDiskStats) {
+              const timeDiff = (now - perfCollector.lastDiskStats.time) / 1000;
+              if (timeDiff > 0) {
+                readRate =
+                  (currentReadBytes - perfCollector.lastDiskStats.read) /
+                  timeDiff;
+                writeRate =
+                  (currentWriteBytes - perfCollector.lastDiskStats.write) /
+                  timeDiff;
+              }
+            }
+
+            perfCollector.lastDiskStats = {
+              time: now,
+              read: currentReadBytes,
+              write: currentWriteBytes,
+            };
+
+            resolve({
+              read: Math.max(0, readRate / 1024), // Return in KB/s
+              write: Math.max(0, writeRate / 1024),
+            });
+          },
+        );
       }
     });
   },
 
   getNetworkStats: async () => {
     return new Promise((resolve) => {
+      const now = Date.now();
       if (process.platform === "darwin") {
-        exec("netstat -i | grep -E 'en[0-9]'", (err, stdout) => {
-          if (err) {
-            resolve({ inbound: 0.8, outbound: 0.5 });
-            return;
-          }
-          // Simulated network traffic
-          resolve({
-            inbound: 1.1 + Math.random() * 0.5,
-            outbound: 0.7 + Math.random() * 0.3,
-          });
-        });
+        exec(
+          "netstat -ib | grep -e 'en[0-9]' | head -n 1 | awk '{print $7, $10}'",
+          (err, stdout) => {
+            if (err) return resolve({ inbound: 0, outbound: 0 });
+            const parts = stdout.trim().split(/\s+/);
+            resolve({
+              inbound: parseFloat(parts[0]) || 0,
+              outbound: parseFloat(parts[1]) || 0,
+            });
+          },
+        );
       } else {
-        exec("ip -s link", (err, stdout) => {
-          if (err) {
-            resolve({ inbound: 0.8, outbound: 0.5 });
-            return;
-          }
-          resolve({
-            inbound: 1.0 + Math.random() * 0.6,
-            outbound: 0.6 + Math.random() * 0.4,
-          });
-        });
+        // Linux: Parse /proc/net/dev for real-time packet info
+        exec(
+          "cat /proc/net/dev | awk 'NR>2 {inbound+=$2; outbound+=$10} END {print inbound, outbound}'",
+          (err, stdout) => {
+            if (err) return resolve({ inbound: 0, outbound: 0 });
+
+            const parts = stdout.trim().split(/\s+/);
+            const currentIn = parseInt(parts[0]) || 0;
+            const currentOut = parseInt(parts[1]) || 0;
+
+            let inRate = 0,
+              outRate = 0;
+
+            if (perfCollector.lastNetStats) {
+              const timeDiff = (now - perfCollector.lastNetStats.time) / 1000;
+              if (timeDiff > 0) {
+                inRate =
+                  (currentIn - perfCollector.lastNetStats.inbound) / timeDiff;
+                outRate =
+                  (currentOut - perfCollector.lastNetStats.outbound) / timeDiff;
+              }
+            }
+
+            perfCollector.lastNetStats = {
+              time: now,
+              inbound: currentIn,
+              outbound: currentOut,
+            };
+
+            resolve({
+              inbound: Math.max(0, inRate / 1024), // Return in KB/s
+              outbound: Math.max(0, outRate / 1024),
+            });
+          },
+        );
       }
     });
   },
@@ -308,7 +361,7 @@ const perfCollector = {
           { maxBuffer: 10 * 1024 * 1024 },
           (err, stdout) => {
             if (err) {
-              resolve(generateDefaultStackTraces());
+              resolve(buildFlameGraphData([]));
               return;
             }
 
@@ -316,7 +369,7 @@ const perfCollector = {
               const stacks = parseStackTraces(stdout);
               resolve(stacks);
             } catch (e) {
-              resolve(generateDefaultStackTraces());
+              resolve(buildFlameGraphData([]));
             }
           },
         );
@@ -327,7 +380,7 @@ const perfCollector = {
           { maxBuffer: 10 * 1024 * 1024 },
           (err, stdout) => {
             if (err) {
-              resolve(generateDefaultStackTraces());
+              resolve(buildFlameGraphData([]));
               return;
             }
 
@@ -335,7 +388,7 @@ const perfCollector = {
               const stacks = parseStackTraces(stdout);
               resolve(stacks);
             } catch (e) {
-              resolve(generateDefaultStackTraces());
+              resolve(buildFlameGraphData([]));
             }
           },
         );
@@ -373,23 +426,6 @@ function parseStackTraces(output) {
   return buildFlameGraphData(stackArray);
 }
 
-function generateDefaultStackTraces() {
-  // Return realistic default stack traces when profiling is unavailable
-  const defaultFunctions = [
-    { name: "sys_entry", percent: 70 },
-    { name: "user_space", percent: 30 },
-    { name: "vfs_read", percent: 40 },
-    { name: "tcp_recvmsg", percent: 30 },
-    { name: "ext4_file_read_iter", percent: 25 },
-    { name: "generic_file_read_iter", percent: 15 },
-    { name: "copy_page_to_iter", percent: 12 },
-    { name: "skb_copy_datagram_iter", percent: 10 },
-    { name: "lock_sock_nested", percent: 8 },
-  ];
-
-  return buildFlameGraphData(defaultFunctions);
-}
-
 function buildFlameGraphData(functions) {
   const totalPercent = functions.reduce((sum, f) => sum + f.percent, 0);
 
@@ -404,6 +440,8 @@ function buildFlameGraphData(functions) {
     level2: [],
     level3: [],
   };
+
+  if (functions.length === 0) return result;
 
   // Level 1: Split between system and user space
   let sysPercent = 0;
@@ -509,20 +547,6 @@ function calculatePercentile(data, percentile) {
 function getSyscallLatencyDistribution() {
   const distribution = {};
 
-  // Check if we have any real data
-  let hasRealData = false;
-  for (const latencies of Object.values(latencyBuckets)) {
-    if (latencies.length > 0) {
-      hasRealData = true;
-      break;
-    }
-  }
-
-  // If no real data, populate with simulated data for display
-  if (!hasRealData) {
-    generateSimulatedLatencies();
-  }
-
   for (const [syscall, latencies] of Object.entries(latencyBuckets)) {
     if (latencies.length > 0) {
       distribution[syscall] = {
@@ -548,31 +572,6 @@ function getSyscallLatencyDistribution() {
   }
 
   return distribution;
-}
-
-// Generate simulated syscall latencies when real tracing is unavailable
-function generateSimulatedLatencies() {
-  const simulatedData = {
-    epoll: { base: 0.3, variance: 0.2, count: 150 },
-    read: { base: 1.1, variance: 0.8, count: 200 },
-    write: { base: 1.5, variance: 1.0, count: 180 },
-    futex: { base: 0.6, variance: 0.3, count: 100 },
-    open: { base: 2.2, variance: 1.5, count: 80 },
-    fsync: { base: 3.0, variance: 2.0, count: 50 },
-    mmap: { base: 1.3, variance: 0.9, count: 120 },
-  };
-
-  for (const [syscall, data] of Object.entries(simulatedData)) {
-    if (latencyBuckets[syscall].length === 0) {
-      for (let i = 0; i < data.count; i++) {
-        // Generate latencies with normal-ish distribution
-        const randomVariance =
-          (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
-        const latency = data.base + randomVariance * data.variance;
-        latencyBuckets[syscall].push(Math.max(0.1, latency)); // Ensure positive values
-      }
-    }
-  }
 }
 
 // ===== IPC Handlers for Performance Data =====
@@ -630,7 +629,7 @@ ipcMain.handle("get-stack-traces", async () => {
     return await perfCollector.getStackTraces();
   } catch (err) {
     console.error("Error getting stack traces:", err);
-    return generateDefaultStackTraces();
+    return buildFlameGraphData([]);
   }
 });
 
@@ -652,12 +651,8 @@ let netCountSecond = 0;
 
 function startPerfTrace() {
   console.log("Starting real perf trace...");
-  // Launching perf trace with pkexec and the absolute path to the working perf binary
-  const perf = spawn("pkexec", [
-    "/usr/lib/linux-tools/6.8.0-110-generic/perf",
-    "trace",
-    "-a",
-  ]);
+  // Changed from hardcoded ubuntu-specific path to standard system path
+  const perf = spawn("pkexec", ["perf", "trace", "-a"]);
 
   perf.on("error", (err) => {
     console.error(
@@ -948,57 +943,67 @@ ipcMain.handle("get-process-tree", async () => {
 //System Calls code
 /*----------------------------------------------------*/
 
-ipcMain.on('start-trace', (event, targetPid) => {
+ipcMain.on("start-trace", (event, targetPid) => {
   if (straceProcess) {
-    event.reply('trace-error', 'Trace already in progress');
+    event.reply("trace-error", "Trace already in progress");
     return; // Already tracing
   }
 
   // If no PID is provided, trace the current Electron main process
   const pidToTrace = targetPid || process.pid;
-  
-  // strace flags: 
+
+  // strace flags:
   // -f : follow child processes
   // -tt : microsecond timestamps
   // -T : time spent in syscall
   // -p : attach to PID
   // -e trace=all : trace all syscalls
   try {
-    straceProcess = spawn('strace', ['-f', '-tt', '-T', '-p', pidToTrace], {
-      stdio: ['pipe', 'pipe', 'pipe']
+    straceProcess = spawn("strace", ["-f", "-tt", "-T", "-p", pidToTrace], {
+      stdio: ["pipe", "pipe", "pipe"],
     });
 
-    straceProcess.on('error', (err) => {
-      console.error('Failed to spawn strace:', err.message);
-      event.reply('trace-error', `Failed to start strace: ${err.message}`);
+    straceProcess.on("error", (err) => {
+      console.error("Failed to spawn strace:", err.message);
+      event.reply("trace-error", `Failed to start strace: ${err.message}`);
       straceProcess = null;
     });
 
     // strace outputs to stderr, not stdout
-    straceProcess.stderr.on('data', (data) => {
-      const lines = data.toString().split('\n');
-      
-      lines.forEach(line => {
+    straceProcess.stderr.on("data", (data) => {
+      const lines = data.toString().split("\n");
+
+      lines.forEach((line) => {
         if (!line.trim()) return;
 
         // Skip non-syscall lines (signals, unfinished, resumed, etc.)
-        if (line.includes('+++') || line.includes('---') || line.includes('resumed') || line.includes('unfinished')) {
+        if (
+          line.includes("+++") ||
+          line.includes("---") ||
+          line.includes("resumed") ||
+          line.includes("unfinished")
+        ) {
           return;
         }
 
-        // Regex patterns to handle various strace formats:
-        // Standard: timestamp syscall(args) = return <time>
-        // Signal: timestamp --- SIGNAL (details) ---
-        // Example: 14:22:01.045892 futex(0x7f8a9c0b29d0, FUTEX_WAIT_PRIVATE, 0, NULL) = -11 EAGAIN <0.001240>
+        // Updated regex to optionally capture the `[pid XXX]` flag generated by `-f`
+        // Standard: timestamp [pid 1234] syscall(args) = return <time>
+        // Example: 14:22:01.045892 [pid 12345] futex(0x7f, FUTEX_WAIT, 0, NULL) = -11 EAGAIN <0.001240>
         const match = line.match(
-          /^(\d{2}:\d{2}:\d{2}\.\d+)\s+([a-zA-Z0-9_]+)\((.*?)\)\s+=\s+(.*?)(?:\s+<([0-9.]+)>)?$/
+          /^(\d{2}:\d{2}:\d{2}\.\d+)\s+(?:\[pid\s+(\d+)\]\s+)?([a-zA-Z0-9_]+)\((.*?)\)\s+=\s+(.*?)(?:\s+<([0-9.]+)>)?$/,
         );
-        
+
         if (match) {
           try {
-            const latencyStr = match[5];
-            let latencyMs = 'N/A';
-            
+            const timestamp = match[1];
+            // If the pid is in the log (due to -f) use it, otherwise use the target PID
+            const parsedPid = match[2] || String(pidToTrace);
+            const syscallName = match[3];
+            const argsRaw = match[4];
+            const returnVal = match[5].trim();
+            const latencyStr = match[6];
+
+            let latencyMs = "N/A";
             if (latencyStr) {
               const latency = parseFloat(latencyStr);
               // strace outputs latency in seconds, convert to milliseconds
@@ -1006,75 +1011,78 @@ ipcMain.on('start-trace', (event, targetPid) => {
             }
 
             const syscallData = {
-              timestamp: match[1],
-              cpu: 'CPU0', // strace doesn't easily provide CPU core without perf
-              pid: String(pidToTrace),
-              syscall: match[2],
-              args: match[3].length > 100 ? match[3].substring(0, 97) + '...' : match[3],
-              returnValue: match[4].trim(),
+              timestamp: timestamp,
+              cpu: "CPU0", // strace doesn't easily provide CPU core without perf
+              pid: parsedPid,
+              syscall: syscallName,
+              args:
+                argsRaw.length > 100
+                  ? argsRaw.substring(0, 97) + "..."
+                  : argsRaw,
+              returnValue: returnVal,
               latency: latencyMs,
-              isError: match[4].trim().startsWith('-')
+              isError: returnVal.startsWith("-"),
             };
-            
+
             if (win && win.webContents && !win.isDestroyed()) {
-              win.webContents.send('syscall-data', syscallData);
+              win.webContents.send("syscall-data", syscallData);
             }
           } catch (parseErr) {
-            console.error('Error parsing syscall data:', parseErr);
+            console.error("Error parsing syscall data:", parseErr);
           }
         }
       });
     });
 
-    straceProcess.stderr.on('error', (err) => {
-      console.error('strace stderr error:', err);
-      event.reply('trace-error', `stderr error: ${err.message}`);
+    straceProcess.stderr.on("error", (err) => {
+      console.error("strace stderr error:", err);
+      event.reply("trace-error", `stderr error: ${err.message}`);
     });
 
-    straceProcess.on('close', (code) => {
+    straceProcess.on("close", (code) => {
       console.log(`strace process exited with code ${code}`);
       straceProcess = null;
       if (win && win.webContents && !win.isDestroyed()) {
-        win.webContents.send('trace-stopped', code);
+        win.webContents.send("trace-stopped", code);
       }
     });
 
-    event.reply('trace-started', `Tracing PID ${pidToTrace}`);
+    event.reply("trace-started", `Tracing PID ${pidToTrace}`);
   } catch (err) {
-    console.error('Error starting trace:', err);
-    event.reply('trace-error', `Error: ${err.message}`);
+    console.error("Error starting trace:", err);
+    event.reply("trace-error", `Error: ${err.message}`);
     straceProcess = null;
   }
 });
 
-ipcMain.on('stop-trace', (event) => {
+ipcMain.on("stop-trace", (event) => {
   if (straceProcess) {
     try {
-      straceProcess.kill('SIGTERM');
+      straceProcess.kill("SIGTERM");
       // Fallback: force kill after 2 seconds
       setTimeout(() => {
         if (straceProcess) {
-          straceProcess.kill('SIGKILL');
+          straceProcess.kill("SIGKILL");
         }
       }, 2000);
-      event.reply('trace-stopping', 'Stopping trace...');
+      event.reply("trace-stopping", "Stopping trace...");
     } catch (err) {
-      console.error('Error stopping trace:', err);
-      event.reply('trace-error', `Error stopping trace: ${err.message}`);
+      console.error("Error stopping trace:", err);
+      event.reply("trace-error", `Error stopping trace: ${err.message}`);
       straceProcess = null;
     }
   } else {
-    event.reply('trace-error', 'No active trace');
+    event.reply("trace-error", "No active trace");
   }
 });
 
 // Cleanup on app exit
-app.on('before-quit', () => {
+app.on("before-quit", () => {
   if (straceProcess) {
     try {
-      straceProcess.kill('SIGKILL');
+      straceProcess.kill("SIGKILL");
     } catch (err) {
-      console.error('Error killing strace on app exit:', err);
+      console.error("Error killing strace on app exit:", err);
     }
     straceProcess = null;
   }
