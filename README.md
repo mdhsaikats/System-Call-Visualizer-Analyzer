@@ -1,34 +1,41 @@
 # System Call Visualizer Analyzer
 
-A desktop application to visualize and analyze system calls, built with Electron.
+> An Electron-based desktop application for visualizing and analyzing system call traces with an interactive, user-friendly interface.
 
-## Features
+---
 
-- Visualizes system call traces in an interactive UI
-- Analyzes system call patterns for insights
-- User-friendly interface for exploring trace data
-- Cross-platform support (Windows, Linux, macOS)
+## 🚀 Overview
 
-## Getting Started
+System Call Visualizer Analyzer (SCVA) helps users explore, analyze, and visualize system call traces from operating systems. It is designed for students, researchers, and developers who want to understand process behaviors and system interactions in a visual way.
+
+## ✨ Features
+
+- **Interactive Visualization:** Explore system call traces with dynamic charts, graphs, and process trees.
+- **Trace Analysis:** Identify patterns, anomalies, and statistics in system call data.
+- **User-Friendly UI:** Clean, intuitive interface for easy navigation and exploration.
+- **Cross-Platform:** Runs on Windows, Linux, and macOS.
+- **Modular Design:** Easily extendable for new trace formats or analysis features.
+
+## 🛠️ Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- [Node.js](https://nodejs.org/) (v18 or later)
 - [npm](https://www.npmjs.com/)
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```sh
    git clone https://github.com/mdhsaikats/System-Call-Visualizer-Analyzer.git
    cd System-Call-Visualizer-Analyzer
    ```
-2. Install dependencies:
+2. **Install dependencies:**
    ```sh
    npm install
    ```
 
-### Running the App
+### Running the Application
 
 Start the Electron app:
 
@@ -36,27 +43,30 @@ Start the Electron app:
 npm start
 ```
 
-## Project Structure
+## 📁 Project Structure
 
-- `main.js` — Main Electron process
-- `renderer/` — UI code (HTML, CSS, JS)
+- `main.js` — Electron main process (app entry point)
+- `preload.js` — Preload scripts for secure context bridging
+- `renderer/` — Frontend UI (HTML, CSS, JS)
+  - `dashboard.html`, `performance.html`, `processtree.html`, `systemcalls.html`, etc.
+  - `js/` — Renderer JavaScript (UI logic, visualization, auth, etc.)
+  - `css/` — Stylesheets
+- `assets/` — Images and static assets
 - `package.json` — Project metadata and scripts
 
-## Contributing
+## 👥 Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Contributions are welcome! Please open an issue to discuss your ideas or submit a pull request. For major changes, start a discussion first.
 
-## License
+## 📄 License
 
-ISC
+This project is licensed under the ISC License.
 
-## Author
+## 👤 Author
 
 saikat
 
-## Work Distribution
-
-The following is the suggested work distribution for a 5-person team:
+## 🧑‍💻 Suggested Team Work Distribution
 
 | Member | Responsibility                                                        |
 | ------ | --------------------------------------------------------------------- |
